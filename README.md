@@ -1,7 +1,7 @@
 # Yerkes Data Analysis
 :stars:
 
-#SDSS SQL
+## SDSS 15 SQL (http://skyserver.sdss.org/dr15/en/tools/search/sql.aspx)
 SELECT
 ra, dec, modelmag_g
 FROM star
