@@ -1,4 +1,5 @@
 from astroquery.gaia import Gaia
+import matplotlib.pyplot as plt
 
 def get_gaia_data (min_ra, max_ra, min_dec, max_dec, brightness):
     '''
@@ -33,3 +34,47 @@ def run_next_step(question):
     else:
         print("Please enter y/n.")
         return run_next_step(question)
+        
+def p_scatter(df1, df2, x, y, xlim =[0,0] , ylim=[0,0], lr1 = False, lr2 = False):
+    '''
+    This function uses matplotlib.pyplot to graph two functions and fix axis (calculated if not given).
+    df2 should be the smaller subset.
+    '''
+    axes = plt.gca()
+    plt.scatter(df1[x], df1[y])
+    plt.scatter(df2[x], df2[y])
+    if xlim == [0,0]:
+        xlim = [df[x].min()-(df[x].max()-df[x].min())*0.05, df[x].max() + (df[x].max()-df[x].min())*0.05]
+    if ylim == [0,0]:
+        ylim = [df[y].min()-(df[y].max()-df[y].min())*0.05, df[y].max() + (df[y].max()-df[y].min())*0.05]
+    axes.set_xlim(xlim)
+    axes.set_ylim(ylim)
+    plt.xlabel(x)
+    plt.ylabel(y)
+    if lr1 == True:
+        model = sm.OLS(df1[y], sm.add_constant(df1[x])).fit()
+        pred = df1[x]*model.params[x]+model.params['const']
+        plt.plot(df1[x],pred,'#2678b2')
+    if lr2 == True:
+        model = sm.OLS(df2[y], sm.add_constant(df2[x])).fit()
+        pred = df2[x]*model.params[x]+model.params['const']
+        plt.plot(df2[x],pred,'#fd7f28')
+
+def match_two_tables(df1, df2):
+    df = pd.DataFrame(columns=['ra','dec','phot_bp_mean_mag','pmra','pmdec',\
+                               'CentroidRA','CentroidDec','Magnitude','diff'])
+    dist = scipy.spatial.distance.cdist(df_apt[['CentroidRA', 'CentroidDec']], df_gaia[['ra', 'dec']])
+    min_dist = np.argmin(dist, axis=1)
+
+    m = 0
+    while m < len(df_apt):
+        n = min_dist[m]
+        df = df.append({'ra': df_gaia['ra'][n], 'dec': df_gaia['dec'][n],\
+                        'phot_bp_mean_mag': df_gaia['phot_bp_mean_mag'][n],\
+                        'pmra': df_gaia['pmra'][n], 'pmdec': df_gaia['pmdec'][n],\
+                        'CentroidRA': df_apt['CentroidRA'][m],'CentroidDec': df_apt['CentroidDec'][m],\
+                        'Magnitude': df_apt['Magnitude'][m],\
+                        'diff': dist[m][n]
+                       }, ignore_index=True)
+        m+=1
+    sns.distplot(df['diff']).set_title('Distribution of difference in match')
