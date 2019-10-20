@@ -6,7 +6,7 @@ import numpy as np
 import seaborn as sns
 import statsmodels.api as sm
 
-def get_gaia_data (min_ra, max_ra, min_dec, max_dec, brightness):
+def get_gaia_data (file, min_ra, max_ra, min_dec, max_dec, brightness):
     '''
     Fetches star data from gaia inside the box given and upper limit of brightness.
     Inputs:
@@ -23,8 +23,11 @@ def get_gaia_data (min_ra, max_ra, min_dec, max_dec, brightness):
     str(max_ra - min_ra) + "," + str(max_dec - min_dec) + "))=1 AND \
     (gaiadr2.gaia_source.phot_bp_mean_mag<=" + str(brightness) + ")" 
     job = Gaia.launch_job_async(query)
-    r = job.get_results() 
-    return r.to_pandas()
+    r = job.get_results()
+    df = r.to_pandas()
+    gaia_name = file+"_gaia.csv"
+    export_csv = df.to_csv(gaia_name, index = None, header=True)
+    return df
 
 def run_next_step(question):
     '''
@@ -39,6 +42,28 @@ def run_next_step(question):
     else:
         print("Please enter y/n.")
         return run_next_step(question)
+        
+def graph_matching(file, apt, gaia, ratio):
+    fig = plt.figure(figsize=(30,10/ratio))
+    title = fig.suptitle("Plate #"+file, fontsize = 25)
+    ax1 = fig.add_subplot(131)
+    plt.scatter(apt["CentroidRA"], apt["CentroidDec"], s = 3)
+    plt.xlabel("RA")
+    plt.ylabel("Dec")
+    ax1.title.set_text('APT')
+    ax2 = fig.add_subplot(132)
+    plt.scatter(gaia["ra"], gaia["dec"], s = 3, c = '#fd7f28')
+    plt.xlabel("RA")
+    plt.ylabel("Dec")
+    ax2.title.set_text('GAIA')
+    ax3 = fig.add_subplot(133)
+    plt.scatter(apt["CentroidRA"], apt["CentroidDec"], alpha = 0.4, s = 3)
+    plt.scatter(gaia["ra"], gaia["dec"], alpha = 0.4, s = 3)
+    plt.xlabel("RA")
+    plt.ylabel("Dec")
+    ax3.title.set_text('APT vs. GAIA')
+    fig.savefig(file+'_match.png')
+    plt.clf()
         
 def p_scatter(file, df1, df2, x, y, xlim =[0,0] , ylim=[0,0], lr1 = False, lr2 = False):
     '''
@@ -88,7 +113,7 @@ def match_two_tables(gaia, apt, file):
     df['Δra'] = df.apply(lambda row: row.ra - row.CentroidRA, axis = 1)
     df['Δdec'] = df.apply(lambda row: row.dec - row.CentroidDec, axis = 1)
     df['Δmag'] = df.apply(lambda row: row.Magnitude - row.phot_bp_mean_mag, axis = 1)
-    sns_plot = sns.distplot(df['diff']).set_title('Distribution of difference in match')
+    sns_plot = sns.distplot(df['diff']).set_title('Distribution of difference in match', fontsize=25)
     fig = sns_plot.get_figure()
     fig.savefig(file+'_hist.png')
     return df
