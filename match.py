@@ -7,7 +7,7 @@ import numpy as np
 import utility
 
 #basic info of csv file from APT
-file = 'config4_r'
+file = input("Enter file name: ")
 filename = file+'.csv'
 df_apt = pd.read_csv(filename) 
 df_apt = df_apt[['CentroidRA', 'CentroidDec','Magnitude', 'MagUncertainty']]
@@ -24,10 +24,9 @@ rp = utility.run_next_step("Fetch data from GAIA")
 if rp:
     df_gaia = utility.get_gaia_data (min_ra, max_ra, min_dec, max_dec, 15)
     gaia_name = file+"_gaia.csv"
-    export_csv = df_gaia.to_csv (gaia_name, index = None, header=True) 
+    export_csv = df_gaia.to_csv(gaia_name, index = None, header=True) 
     plt.scatter(df_apt["CentroidRA"], df_apt["CentroidDec"], alpha = 0.4, s = 3)
     plt.scatter(df_gaia["ra"], df_gaia["dec"], alpha = 0.4, s = 3)
-    plt.savefig(file+'_figs.png')
     plt.xlabel("RA")
     plt.ylabel("Dec")
     plt.legend(bbox_to_anchor=(0, 1), loc='lower left', ncol = 2, fontsize='small')
