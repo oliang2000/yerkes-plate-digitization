@@ -5,6 +5,9 @@ import scipy
 import numpy as np
 import seaborn as sns
 import statsmodels.api as sm
+import os
+my_path = os.path.abspath(__file__)
+my_path = my_path.replace("utility.py", "")
 
 def get_gaia_data (file, min_ra, max_ra, min_dec, max_dec, brightness):
     '''
@@ -26,7 +29,7 @@ def get_gaia_data (file, min_ra, max_ra, min_dec, max_dec, brightness):
     r = job.get_results()
     df = r.to_pandas()
     gaia_name = file+"_gaia.csv"
-    export_csv = df.to_csv(gaia_name, index = None, header=True)
+    export_csv = df.to_csv(my_path + file + '/' + gaia_name, index = None, header=True)
     return df
 
 def run_next_step(question):
@@ -44,8 +47,9 @@ def run_next_step(question):
         return run_next_step(question)
         
 def graph_matching(file, apt, gaia, ratio):
-    fig = plt.figure(figsize=(30,10/ratio))
+    fig = plt.figure(figsize=(60,20/ratio))
     title = fig.suptitle("Plate #"+file, fontsize = 25)
+    fig.subplots_adjust(top=0.85, wspace=0.3, hspace=0.5)
     ax1 = fig.add_subplot(131)
     plt.scatter(apt["CentroidRA"], apt["CentroidDec"], s = 3)
     plt.xlabel("RA")
@@ -62,8 +66,7 @@ def graph_matching(file, apt, gaia, ratio):
     plt.xlabel("RA")
     plt.ylabel("Dec")
     ax3.title.set_text('APT vs. GAIA')
-    fig.savefig(file+'_match.png')
-    plt.clf()
+    fig.savefig(my_path + file + '/match_' + file + '.png')
         
 def p_scatter(file, df1, df2, x, y, xlim =[0,0] , ylim=[0,0], lr1 = False, lr2 = False):
     '''
@@ -91,7 +94,7 @@ def p_scatter(file, df1, df2, x, y, xlim =[0,0] , ylim=[0,0], lr1 = False, lr2 =
         pred = df2[x]*model.params[x]+model.params['const']
         plt.plot(df2[x],pred,'#fd7f28')
     title = plt.suptitle(file + ': ' + x + ' vs. ' + y, fontsize=12)
-    plt.savefig(file + '_' + x + '_' + y + '.png')
+    plt.savefig(my_path + file + '/' + file + '_' + x + '_' + y + '.png')
 
 def match_two_tables(gaia, apt, file):
     df = pd.DataFrame(columns=['ra','dec','phot_bp_mean_mag','pmra','pmdec',\
@@ -113,7 +116,11 @@ def match_two_tables(gaia, apt, file):
     df['Δra'] = df.apply(lambda row: row.ra - row.CentroidRA, axis = 1)
     df['Δdec'] = df.apply(lambda row: row.dec - row.CentroidDec, axis = 1)
     df['Δmag'] = df.apply(lambda row: row.Magnitude - row.phot_bp_mean_mag, axis = 1)
-    sns_plot = sns.distplot(df['diff']).set_title('Distribution of difference in match', fontsize=25)
-    fig = sns_plot.get_figure()
-    fig.savefig(file+'_hist.png')
+    plt.clf()
+    plt.hist(df['diff'])
+    plt.savefig(my_path + file + '/' +file+'_hist.png')
+    #plt.show()
+    #sns_plot = sns.distplot(df['diff']).set_title('Distribution of difference in match', fontsize=25)
+    #fig = sns_plot.get_figure()
+    #fig.savefig(my_path + file + '/' +file+'_hist.png')
     return df
