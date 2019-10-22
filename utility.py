@@ -67,6 +67,7 @@ def graph_matching(file, apt, gaia, ratio):
     plt.ylabel("Dec")
     ax3.title.set_text('APT vs. GAIA')
     fig.savefig(my_path + file + '/match_' + file + '.png')
+    plt.close()
         
 def p_scatter(file, df1, df2, x, y, xlim =[0,0] , ylim=[0,0], lr1 = False, lr2 = False):
     '''
@@ -95,6 +96,7 @@ def p_scatter(file, df1, df2, x, y, xlim =[0,0] , ylim=[0,0], lr1 = False, lr2 =
         plt.plot(df2[x],pred,'#fd7f28')
     title = plt.suptitle(file + ': ' + x + ' vs. ' + y, fontsize=12)
     plt.savefig(my_path + file + '/' + file + '_' + x + '_' + y + '.png')
+    plt.close()
 
 def match_two_tables(gaia, apt, file):
     df = pd.DataFrame(columns=['ra','dec','phot_bp_mean_mag','pmra','pmdec',\
@@ -116,11 +118,7 @@ def match_two_tables(gaia, apt, file):
     df['Δra'] = df.apply(lambda row: row.ra - row.CentroidRA, axis = 1)
     df['Δdec'] = df.apply(lambda row: row.dec - row.CentroidDec, axis = 1)
     df['Δmag'] = df.apply(lambda row: row.Magnitude - row.phot_bp_mean_mag, axis = 1)
-    plt.clf()
     plt.hist(df['diff'])
     plt.savefig(my_path + file + '/' +file+'_hist.png')
-    #plt.show()
-    #sns_plot = sns.distplot(df['diff']).set_title('Distribution of difference in match', fontsize=25)
-    #fig = sns_plot.get_figure()
-    #fig.savefig(my_path + file + '/' +file+'_hist.png')
+    plt.close()
     return df
