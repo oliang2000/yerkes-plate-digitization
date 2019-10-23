@@ -1,7 +1,6 @@
-## Yerkes Data Analysis
+## Yerkes Plate Digitization Data Analysis
 :stars:
 
-Functions:  
-Get data from gaia  
-Read CSV created by Apeture Astrometry Tool  
+match.py:
+For a given .csv file (of start data extracted from plate), fetches star data of matching field from GAIA and compares data.
  
