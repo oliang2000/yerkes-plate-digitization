@@ -95,7 +95,7 @@ def p_scatter(file, df1, df2, x, y, xlim =[0,0] , ylim=[0,0], lr1 = False, lr2 =
         pred = df2[x]*model.params[x]+model.params['const']
         plt.plot(df2[x],pred,'#fd7f28')
     title = plt.suptitle(file + ': ' + x + ' vs. ' + y, fontsize=12)
-    plt.savefig(my_path + file + '/' + file + '_' + x + '_' + y + '.png')
+    plt.savefig(my_path + file + '/' + file + '_'+ x + '_' + y + '.png')
     plt.close()
 
 def match_two_tables(gaia, apt, file):
@@ -115,10 +115,11 @@ def match_two_tables(gaia, apt, file):
                         'diff': dist[m][n]
                        }, ignore_index=True)
         m+=1
-    df['Δra'] = df.apply(lambda row: row.ra - row.CentroidRA, axis = 1)
-    df['Δdec'] = df.apply(lambda row: row.dec - row.CentroidDec, axis = 1)
-    df['Δmag'] = df.apply(lambda row: row.Magnitude - row.phot_bp_mean_mag, axis = 1)
-    plt.hist(df['diff'])
+    df['del_ra'] = df.apply(lambda row: row.ra - row.CentroidRA, axis = 1)
+    df['del_dec'] = df.apply(lambda row: row.dec - row.CentroidDec, axis = 1)
+    df['del_mag'] = df.apply(lambda row: row.Magnitude - row.phot_bp_mean_mag, axis = 1)
+    export_csv = df.to_csv(my_path + file + '/' + file + "_match.csv", index = None, header=True)
+    plt.hist(df['diff'], bins = 20)
     plt.savefig(my_path + file + '/' +file+'_hist.png')
     plt.close()
     return df
