@@ -27,14 +27,21 @@ getdata = utility.run_next_step("Fetch data from GAIA")
 if getdata:
     df_gaia = utility.get_gaia_data(file, min_ra, max_ra, min_dec, max_dec, 18) 
     utility.graph_matching(file, df_apt, df_gaia, (max_ra-min_ra)/(max_dec-min_dec))
-elif not getdata:
+else:
     df_gaia = pd.read_csv(my_path + file + '/' + file+'_gaia.csv')
     utility.graph_matching(file, df_apt, df_gaia, (max_ra-min_ra)/(max_dec-min_dec))
-#Matching
-if utility.run_next_step("Proceed matching"):
+
+#Matching & create graphs
+do_matching = utility.run_next_step("Match data")
+if do_matching:
     df = utility.match_two_tables(df_gaia, df_apt, file)
-    df_filtered = df.query('diff<' + input("Cut difference at? "))
-    utility.p_scatter(file, df, df_filtered, 'phot_bp_mean_mag', 'Magnitude', lr2 = True)
+else:
+	df = pd.read_csv(my_path + file + '/' + file+'_match.csv')
+df_filtered = df.query('diff<' + input("Cut difference at? "))
+utility.p_scatter(file, df, df_filtered, 'phot_bp_mean_mag', 'Magnitude', lr2 = True)
+utility.p_scatter(file, df, df_filtered, 'ra', 'del_ra')
+utility.p_scatter(file, df, df_filtered, 'dec', 'del_dec')
+
 
 
 
