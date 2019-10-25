@@ -1,7 +1,5 @@
-## Yerkes Plate Digitization Data Analysis
-:stars:
-
-**match.py & utility.py**:  
+## Yerkes Plate Digitization
+:stars: **match.py & utility.py**:  
 For a given .csv file (of star data extracted from plate), fetches star data of matching field from GAIA and compares data. Saves both .csv files of the fetched GAIA data and matching data, and .png outputs of comparison.
 
 How to use:  
