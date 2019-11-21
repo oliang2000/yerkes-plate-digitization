@@ -8,7 +8,9 @@ For a giving .fits file of a plate, generate a .csv file of star data extracted 
 :stars: **match.py & utility.py**:  
 For a given .csv file (of star data extracted from plate), fetches star data of matching field from GAIA and compares data.  
 - Saves both .csv files of the fetched GAIA data and matching data
-- Outputs .png and .txt of the comparison of GAIA and plate data, accuracy calculated from treating GAIA as "truth"
+- Outputs .png and .txt of the comparison of GAIA and plate data, accuracy calculated from treating GAIA as "truth:
+  - photometry: deviation in mag (comparing to that of GAIA)
+  - astrometry: deviation in RA and Dec (in both degrees and pixels)
 
 To use:  
 1. Create a folder inside the same folder containing match.py & utility.py, this folder should be named the plate name, which will be used in created .csv files and figures in this program
