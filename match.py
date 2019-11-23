@@ -11,7 +11,7 @@ my_path = os.path.abspath(__file__)
 my_path = my_path.replace("match.py", "")
 
 #basic info of csv file from APT
-file = input("Enter file name: ")
+file = input("Enter file name: ").strip()
 df_apt = pd.read_csv(my_path + file + '/' + file + '.csv') 
 df_apt = df_apt[['CentroidRA', 'CentroidDec','Magnitude', 'MagUncertainty']]
 min_ra = df_apt['CentroidRA'].min()
