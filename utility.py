@@ -120,6 +120,9 @@ def match_two_tables(gaia, apt, file):
     df['del_mag'] = df.apply(lambda row: row.Magnitude - row.phot_bp_mean_mag, axis = 1)
     export_csv = df.to_csv(my_path + file + '/' + file + "_match.csv", index = None, header=True)
     plt.hist(df['diff'], bins = 20)
+    file1 = open(my_path + file + '/' + file + "_stats.txt","w") 
+    file1.write(str(((df.del_ra - df.del_ra.mean()) ** 2).mean() ** .5))
+    file1.close() 
     plt.savefig(my_path + file + '/' +file+'_hist.png')
     plt.close()
     return df
