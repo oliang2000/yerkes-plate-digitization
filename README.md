@@ -1,12 +1,12 @@
 ## Yerkes Plate Digitization
 
-:stars: **convert.py**:  
+:stars: **convert.py** (unfinished):  
 Convert a plate image to fits file.
 
-:stars: **extract.py**:  
+:stars: **extract.py** (unfinished):  
 For a giving .fits file of a plate, generate a .csv file of star data extracted from plate, including:   
-- object 
-
+- location (RA, Dec)
+- magnitude
 
 :stars: **match.py & utility.py**:  
 For a given .csv file (of star data extracted from plate), fetches star data of matching field from GAIA and compares data.  
