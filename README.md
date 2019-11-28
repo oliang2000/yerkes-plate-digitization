@@ -1,8 +1,11 @@
 ## Yerkes Plate Digitization
 
-:stars: **extract.py**:  
-For a giving .fits file of a plate, generate a .csv file of star data extracted from plate, including:
+:stars: **convert.py**:  
+Convert a plate image to fits file.
 
+:stars: **extract.py**:  
+For a giving .fits file of a plate, generate a .csv file of star data extracted from plate, including:   
+- object 
 
 
 :stars: **match.py & utility.py**:  
