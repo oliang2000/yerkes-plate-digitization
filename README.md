@@ -14,6 +14,7 @@ For a given .csv file (of star data extracted from plate), fetches star data of 
 - Outputs .png and .txt of the comparison of GAIA and plate data, accuracy calculated from treating GAIA as "truth:
   - photometry: deviation in mag (comparing to that of GAIA)
   - astrometry: deviation in RA and Dec (in both degrees and pixels)
+  - Calculation methods:  
 
 To use:  
 1. Create a folder inside the same folder containing match.py & utility.py, this folder should be named the plate name, which will be used in created .csv files and figures in this program
