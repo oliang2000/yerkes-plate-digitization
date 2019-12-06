@@ -22,5 +22,8 @@ To use:
 3. Run *python match.py* in terminal, inside the folder containing match.py & utility.py
 4. Proceed according to terminal instruction, figures will be produced in the folder with .csv file
 
+**Packages**  
+
+
 **References**  
 [1] https://www.astromatic.net/software/sextractor
