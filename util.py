@@ -6,19 +6,50 @@ import numpy as np
 import seaborn as sns
 import statsmodels.api as sm
 import os
-my_path = os.path.abspath(__file__)
-my_path = my_path.replace("utility.py", "")
+MY_PATH = os.path.abspath(__file__).replace("util.py", "")
+
+def process_file(file):
+    '''
+    Reads table from apt with selected columns, outputs the table
+      prints information about the coordinates.
+    '''
+
+    df_apt = pd.read_csv(MY_PATH + file + '/' + file + '.csv')
+    df_apt = df_apt[['CentroidRA', 'CentroidDec','Magnitude', 'MagUncertainty']]
+    min_ra = df_apt['CentroidRA'].min()
+    max_ra = df_apt['CentroidRA'].max()
+    min_dec = df_apt['CentroidDec'].min()
+    max_dec = df_apt['CentroidDec'].max()
+    min_brightness = df_apt['Magnitude'].min()
+    max_brightness = df_apt['Magnitude'].max()
+
+    file1 = open(MY_PATH + file + '/' + file + "_stats.txt","w") 
+    file1.write("\n------------------IMAGE INFO-------------------\n")
+    file1.write(" RA: " + str(min_ra) + ", " + str(max_ra) + "\n")
+    file1.write(" Dec: " + str(min_dec) + ", " + str(max_dec) + "\n")
+    file1.write(" Mag: " + str(min_brightness) + ", " + str(max_brightness) + "\n")
+    file1.close() 
+
+    print("\n------------------IMAGE INFO-------------------")
+    print(" RA:" ,[min_ra, max_ra], "\n Dec:", [min_dec, max_dec])
+    print(" Mag:" ,[max_brightness, min_brightness])
+    print("-----------------------------------------------")
+
+    gaia_name = file+"_gaia.csv"
+    if os.path.isfile(MY_PATH + file + '/' + gaia_name):
+        print ("GAIA data exists.")
+        df_gaia = pd.read_csv(MY_PATH + file + '/' + file+'_gaia.csv')
+    else:
+        df_gaia = get_gaia_data(file, min_ra, max_ra, min_dec, max_dec, max_brightness)
+    return (df_apt, df_gaia)
+
+
 
 def get_gaia_data (file, min_ra, max_ra, min_dec, max_dec, brightness):
     '''
     Fetches star data from gaia inside the box given and upper limit of brightness.
-    Inputs:
-        min_ra: minimum value of RA
-        max_ra: maximum value of RA
-        min_dec: minimum value of Dec
-        max_dec: maximum value of Dec
-    Outputs: pandas datatable
     '''
+    print("Getting data from GAIA...")
     query = "SELECT ALL gaia_source.source_id,gaia_source.ra,gaia_source.dec,\
     gaia_source.pmra,gaia_source.pmdec,gaia_source.phot_bp_mean_mag FROM gaiadr2.gaia_source WHERE CONTAINS\
     (POINT('ICRS',gaiadr2.gaia_source.ra,gaiadr2.gaia_source.dec),BOX('ICRS'," + \
@@ -27,10 +58,66 @@ def get_gaia_data (file, min_ra, max_ra, min_dec, max_dec, brightness):
     (gaiadr2.gaia_source.phot_bp_mean_mag<=" + str(brightness) + ")" 
     job = Gaia.launch_job_async(query)
     r = job.get_results()
-    df = r.to_pandas()
+    df_gaia = r.to_pandas()
     gaia_name = file+"_gaia.csv"
-    export_csv = df.to_csv(my_path + file + '/' + gaia_name, index = None, header=True)
+    export_csv = df_gaia.to_csv(MY_PATH + file + '/' + gaia_name, index = None, header=True)
+    print("File saved as", gaia_name)
+    return df_gaia
+   
+
+
+def match_two_tables(gaia, apt, file):
+    if os.path.isfile(MY_PATH + file + '/' + file+'_match.csv'):
+        print ("Matching file data exists.")
+        df = pd.read_csv(MY_PATH + file + '/' + file+'_match.csv')
+    else:
+        print("Start matching GAIA and APT data...")
+        df = pd.DataFrame(columns=['ra','dec','phot_bp_mean_mag','pmra','pmdec',\
+                                   'CentroidRA','CentroidDec','Magnitude','diff'])
+        dist = scipy.spatial.distance.cdist(apt[['CentroidRA', 'CentroidDec']], gaia[['ra', 'dec']])
+        min_dist = np.argmin(dist, axis=1)
+
+        m = 0
+        while m < len(apt):
+            n = min_dist[m]
+            df = df.append({'ra': gaia['ra'][n], 'dec': gaia['dec'][n],\
+                            'phot_bp_mean_mag': gaia['phot_bp_mean_mag'][n],\
+                            'pmra': gaia['pmra'][n], 'pmdec': gaia['pmdec'][n],\
+                            'CentroidRA': apt['CentroidRA'][m],'CentroidDec': apt['CentroidDec'][m],\
+                            'Magnitude': apt['Magnitude'][m],\
+                            'diff': dist[m][n]
+                           }, ignore_index=True)
+            m+=1
+        df['del_ra'] = df.apply(lambda row: row.ra - row.CentroidRA, axis = 1)
+        df['del_dec'] = df.apply(lambda row: row.dec - row.CentroidDec, axis = 1)
+        df['del_mag'] = df.apply(lambda row: row.Magnitude - row.phot_bp_mean_mag, axis = 1)
+
+        export_csv = df.to_csv(MY_PATH + file + '/' + file + "_match.csv", index = None, header=True)
+        
+        # plt.hist(df['diff'], bins = 20)
+        # plt.savefig(MY_PATH + file + '/' +file+'_hist.png')
+        # plt.close()
+
+        print("Matching finished.")
     return df
+
+
+def analyze_data(df, file):
+    #write txt with data info
+    file1 = open(MY_PATH + file + '/' + file + "_stats.txt", "a") 
+    file1.write("----------------------RMS----------------------\n")
+    file1.write(get_rms(df, "del_ra", "deg"))
+    file1.write(get_rms(df, "del_dec", "deg"))
+    file1.write(get_rms(df, "del_mag"))
+    file1.close() 
+
+def get_rms(df, col, unit = ""):
+    '''
+    Calculates rms for a column of a datatable, returns a string
+      in the format "colname: data"
+    '''
+    rms = ((df[col] - df[col].mean()) ** 2).mean() ** .5
+    return (col + ": " + str(rms) + " "+ unit + "\n")
 
 def run_next_step(question):
     '''
@@ -46,29 +133,38 @@ def run_next_step(question):
         print("Please enter y/n.")
         return run_next_step(question)
         
-def graph_matching(file, apt, gaia, ratio):
-    fig = plt.figure(figsize=(60,20/ratio))
-    title = fig.suptitle("Plate #"+file, fontsize = 25)
-    fig.subplots_adjust(top=0.85, wspace=0.3, hspace=0.5)
-    ax1 = fig.add_subplot(131)
-    plt.scatter(apt["CentroidRA"], apt["CentroidDec"], s = 3)
-    plt.xlabel("RA")
-    plt.ylabel("Dec")
-    ax1.title.set_text('APT')
-    ax2 = fig.add_subplot(132)
-    plt.scatter(gaia["ra"], gaia["dec"], s = 3, c = '#fd7f28')
-    plt.xlabel("RA")
-    plt.ylabel("Dec")
-    ax2.title.set_text('GAIA')
-    ax3 = fig.add_subplot(133)
-    plt.scatter(apt["CentroidRA"], apt["CentroidDec"], alpha = 0.4, s = 3)
-    plt.scatter(gaia["ra"], gaia["dec"], alpha = 0.4, s = 3)
-    plt.xlabel("RA")
-    plt.ylabel("Dec")
-    ax3.title.set_text('APT vs. GAIA')
-    fig.savefig(my_path + file + '/match_' + file + '.png')
-    plt.close()
-        
+
+
+def graph_matching(file, apt, gaia):
+    apt.plot.scatter(x = "CentroidRA", y = "CentroidDec")
+    plt.savefig(MY_PATH + file + '/apt_' + file + '.png')
+    gaia.plot.scatter(x = "ra", y = "dec", c = 'red')
+    plt.savefig(MY_PATH + file + '/gaia_' + file + '.png')
+    # ratio = 0.8
+    # fig = plt.figure(figsize=(60,20/ratio))
+    # title = fig.suptitle("Plate #"+file, fontsize = 25)
+    # fig.subplots_adjust(top=0.85, wspace=0.3, hspace=0.5)
+    # ax1 = fig.add_subplot(131)
+    # plt.scatter(apt["CentroidRA"], apt["CentroidDec"], s = 3)
+    # plt.xlabel("RA")
+    # plt.ylabel("Dec")
+    # ax1.title.set_text('APT')
+    # ax2 = fig.add_subplot(132)
+    # plt.scatter(gaia["ra"], gaia["dec"], s = 3, c = '#fd7f28')
+    # plt.xlabel("RA")
+    # plt.ylabel("Dec")
+    # ax2.title.set_text('GAIA')
+    # ax3 = fig.add_subplot(133)
+    # plt.scatter(apt["CentroidRA"], apt["CentroidDec"], alpha = 0.4, s = 3)
+    # plt.scatter(gaia["ra"], gaia["dec"], alpha = 0.4, s = 3)
+    # plt.xlabel("RA")
+    # plt.ylabel("Dec")
+    # ax3.title.set_text('APT vs. GAIA')
+    #plt.savefig(MY_PATH + file + '/match_' + file + '.png')
+    # plt.close()
+
+
+
 def p_scatter(file, df1, df2, x, y, xlim =[0,0] , ylim=[0,0], lr1 = False, lr2 = False):
     '''
     This function uses matplotlib.pyplot to graph two functions and fix axis (calculated if not given).
@@ -95,39 +191,7 @@ def p_scatter(file, df1, df2, x, y, xlim =[0,0] , ylim=[0,0], lr1 = False, lr2 =
         pred = df2[x]*model.params[x]+model.params['const']
         plt.plot(df2[x],pred,'#fd7f28')
     title = plt.suptitle(file + ': ' + x + ' vs. ' + y, fontsize=12)
-    plt.savefig(my_path + file + '/' + file + '_'+ x + '_' + y + '.png')
+    plt.savefig(MY_PATH + file + '/' + file + '_'+ x + '_' + y + '.png')
     plt.close()
 
-def match_two_tables(gaia, apt, file):
-    df = pd.DataFrame(columns=['ra','dec','phot_bp_mean_mag','pmra','pmdec',\
-                               'CentroidRA','CentroidDec','Magnitude','diff'])
-    dist = scipy.spatial.distance.cdist(apt[['CentroidRA', 'CentroidDec']], gaia[['ra', 'dec']])
-    min_dist = np.argmin(dist, axis=1)
 
-    m = 0
-    while m < len(apt):
-        n = min_dist[m]
-        df = df.append({'ra': gaia['ra'][n], 'dec': gaia['dec'][n],\
-                        'phot_bp_mean_mag': gaia['phot_bp_mean_mag'][n],\
-                        'pmra': gaia['pmra'][n], 'pmdec': gaia['pmdec'][n],\
-                        'CentroidRA': apt['CentroidRA'][m],'CentroidDec': apt['CentroidDec'][m],\
-                        'Magnitude': apt['Magnitude'][m],\
-                        'diff': dist[m][n]
-                       }, ignore_index=True)
-        m+=1
-    df['del_ra'] = df.apply(lambda row: row.ra - row.CentroidRA, axis = 1)
-    df['del_dec'] = df.apply(lambda row: row.dec - row.CentroidDec, axis = 1)
-    df['del_mag'] = df.apply(lambda row: row.Magnitude - row.phot_bp_mean_mag, axis = 1)
-    export_csv = df.to_csv(my_path + file + '/' + file + "_match.csv", index = None, header=True)
-    plt.hist(df['diff'], bins = 20)
-
-    file1 = open(my_path + file + '/' + file + "_stats.txt","w") 
-    ra_rms = ((df.del_ra - df.del_ra.mean()) ** 2).mean() ** .5 #change into function
-    dec_rms = ((df.del_dec - df.del_dec.mean()) ** 2).mean() ** .5
-    file1.write(str(ra_rms))
-    file1.write(str(dec_rms))
-    file1.close() 
-    
-    plt.savefig(my_path + file + '/' +file+'_hist.png')
-    plt.close()
-    return df
