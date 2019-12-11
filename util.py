@@ -107,7 +107,7 @@ def match_two_tables(gaia, apt, file):
 
 
 
-def analyze_data(df, file):
+def analyze_data(df, file, dpp):
 
     #testtt
     df.hist(column='diff', bins = 15)
@@ -127,24 +127,34 @@ def analyze_data(df, file):
     plt.savefig(MY_PATH + file + '/deldec_' + file + '.png')
     df.plot.scatter(x = "phot_bp_mean_mag", y = "Magnitude")
     plt.savefig(MY_PATH + file + '/mag_' + file + '.png')
+    df.plot.scatter(x = "phot_bp_mean_mag", y = "del_ra")
+    plt.savefig(MY_PATH + file + '/111_' + file + '.png')
+    df.plot.scatter(x = "phot_bp_mean_mag", y = "del_dec")
+    plt.savefig(MY_PATH + file + '/222_' + file + '.png')
     #write txt with data info
     file1 = open(MY_PATH + file + '/' + file + "_stats.txt", "a") 
     file1.write("---------------------RMS-----------------------\n")
     file1.write("Removed " + ("%.3f" % (1 - len_after/len_before)) + "% of data\n")
-    file1.write(get_rms(df, "del_ra", "deg"))
-    file1.write(get_rms(df, "del_dec", "deg"))
+    file1.write(get_rms(df, "del_ra", "deg", dpp, "pixel"))
+    file1.write(get_rms(df, "del_dec", "deg", dpp, "pixel"))
     file1.write(get_rms(df, "del_mag"))
     file1.close() 
 
 
 
-def get_rms(df, col, unit = ""):
+def get_rms(df, col, unit = "", conv_f = None, conv_unit = None):
     '''
     Calculates rms for a column of a datatable, returns a string
       in the format "colname: data"
     '''
     rms = ((df[col] - df[col].mean()) ** 2).mean() ** .5
-    return (col + ": " + str(rms) + " "+ unit + "\n")
+    if conv_f == None: 
+        return (col + ": " + str(rms) + " "+ unit + "\n")
+    else:
+        conv = rms/conv_f
+        return (col + ": " + str(rms) + " "+ unit + \
+            "(" + ("%.3f" % conv) + " " + conv_unit + ")" + "\n")
+
 
 
 
