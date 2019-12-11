@@ -13,7 +13,6 @@ def process_file(file):
     Reads table from apt with selected columns, outputs the table
       prints information about the coordinates.
     '''
-
     df_apt = pd.read_csv(MY_PATH + file + '/' + file + '.csv')
     df_apt = df_apt[['CentroidRA', 'CentroidDec','Magnitude', 'MagUncertainty']]
     min_ra = df_apt['CentroidRA'].min()
@@ -40,7 +39,7 @@ def process_file(file):
         print ("GAIA data exists.")
         df_gaia = pd.read_csv(MY_PATH + file + '/' + file+'_gaia.csv')
     else:
-        df_gaia = get_gaia_data(file, min_ra, max_ra, min_dec, max_dec, max_brightness)
+        df_gaia = get_gaia_data(file, min_ra, max_ra, min_dec, max_dec, 20)
     return (df_apt, df_gaia)
 
 
@@ -88,28 +87,56 @@ def match_two_tables(gaia, apt, file):
                             'diff': dist[m][n]
                            }, ignore_index=True)
             m+=1
+        df = df.sort_values('diff').drop_duplicates('ra')
+        df = df.sort_values('diff').drop_duplicates('CentroidRA')
+        df= df.reset_index(drop=True) 
         df['del_ra'] = df.apply(lambda row: row.ra - row.CentroidRA, axis = 1)
         df['del_dec'] = df.apply(lambda row: row.dec - row.CentroidDec, axis = 1)
         df['del_mag'] = df.apply(lambda row: row.Magnitude - row.phot_bp_mean_mag, axis = 1)
 
         export_csv = df.to_csv(MY_PATH + file + '/' + file + "_match.csv", index = None, header=True)
-        
-        # plt.hist(df['diff'], bins = 20)
-        # plt.savefig(MY_PATH + file + '/' +file+'_hist.png')
-        # plt.close()
 
         print("Matching finished.")
+    file1 = open(MY_PATH + file + '/' + file + "_stats.txt", "a") 
+    file1.write("--------------------MATCH----------------------\n")
+    file1.write("APT: " + str(len(apt)) + "\n")
+    file1.write("GAIA: " + str(len(gaia)) + "\n")
+    file1.write("MATCHED: " + str(len(df)) + "\n")
+    file1.close() 
     return df
 
 
+
 def analyze_data(df, file):
+
+    #testtt
+    df.hist(column='diff', bins = 15)
+    plt.savefig(MY_PATH + file + '/hist1_' + file + '.png')
+
+
+    #get data with 68% in RA and Dec
+    len_before = len(df)
+    #df = df[np.abs(df["diff"]) <= np.percentile(np.abs(df["diff"]), 68)] #
+    len_after = len(df)
+    #figures
+    df.hist(column='diff', bins = 15)
+    plt.savefig(MY_PATH + file + '/hist2_' + file + '.png')
+    df.plot.scatter(x = "ra", y = "del_ra")
+    plt.savefig(MY_PATH + file + '/delra_' + file + '.png')
+    df.plot.scatter(x = "dec", y = "del_dec")
+    plt.savefig(MY_PATH + file + '/deldec_' + file + '.png')
+    df.plot.scatter(x = "phot_bp_mean_mag", y = "Magnitude")
+    plt.savefig(MY_PATH + file + '/mag_' + file + '.png')
     #write txt with data info
     file1 = open(MY_PATH + file + '/' + file + "_stats.txt", "a") 
-    file1.write("----------------------RMS----------------------\n")
+    file1.write("---------------------RMS-----------------------\n")
+    file1.write("Removed " + ("%.3f" % (1 - len_after/len_before)) + "% of data\n")
     file1.write(get_rms(df, "del_ra", "deg"))
     file1.write(get_rms(df, "del_dec", "deg"))
     file1.write(get_rms(df, "del_mag"))
     file1.close() 
+
+
 
 def get_rms(df, col, unit = ""):
     '''
@@ -118,6 +145,8 @@ def get_rms(df, col, unit = ""):
     '''
     rms = ((df[col] - df[col].mean()) ** 2).mean() ** .5
     return (col + ": " + str(rms) + " "+ unit + "\n")
+
+
 
 def run_next_step(question):
     '''
@@ -195,3 +224,4 @@ def p_scatter(file, df1, df2, x, y, xlim =[0,0] , ylim=[0,0], lr1 = False, lr2 =
     plt.close()
 
 
+#distance in space
