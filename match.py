@@ -16,7 +16,7 @@ util.graph_matching(file, df_apt, df_gaia)
 
 #Matching & create graphs
 df = util.match_two_tables(df_gaia, df_apt, file)
-util.analyze_data(df, file, 0.0004388889) #dpp
+util.analyze_data(df, file, 1.58) #arcsecpp
 
 #util.p_scatter(file, df, df_filtered, 'phot_bp_mean_mag', 'Magnitude', lr2 = True)
 #util.p_scatter(file, df, df_filtered, 'ra', 'del_ra')

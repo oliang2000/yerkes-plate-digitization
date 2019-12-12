@@ -89,14 +89,14 @@ def match_two_tables(gaia, apt, file):
             m+=1
         df = df.sort_values('diff').drop_duplicates('ra')
         df = df.sort_values('diff').drop_duplicates('CentroidRA')
-        df= df.reset_index(drop=True) 
-        df['del_ra'] = df.apply(lambda row: row.ra - row.CentroidRA, axis = 1)
-        df['del_dec'] = df.apply(lambda row: row.dec - row.CentroidDec, axis = 1)
-        df['del_mag'] = df.apply(lambda row: row.Magnitude - row.phot_bp_mean_mag, axis = 1)
+        df = df.reset_index(drop=True) 
+        df['del_ra'] = df.apply(lambda row: (row.ra - row.CentroidRA) * 3600, axis = 1)
+        df['del_dec'] = df.apply(lambda row: (row.dec - row.CentroidDec) * 3600, axis = 1)
 
         export_csv = df.to_csv(MY_PATH + file + '/' + file + "_match.csv", index = None, header=True)
 
         print("Matching finished.")
+
     file1 = open(MY_PATH + file + '/' + file + "_stats.txt", "a") 
     file1.write("--------------------MATCH----------------------\n")
     file1.write("APT: " + str(len(apt)) + "\n")
@@ -113,31 +113,30 @@ def analyze_data(df, file, dpp):
     df.hist(column='diff', bins = 15)
     plt.savefig(MY_PATH + file + '/hist1_' + file + '.png')
 
-
     #get data with 68% in RA and Dec
     len_before = len(df)
-    #df = df[np.abs(df["diff"]) <= np.percentile(np.abs(df["diff"]), 68)] #
+    df = df[np.abs(df["diff"]) <= np.percentile(np.abs(df["diff"]), 68)] #
     len_after = len(df)
+
     #figures
     df.hist(column='diff', bins = 15)
     plt.savefig(MY_PATH + file + '/hist2_' + file + '.png')
-    df.plot.scatter(x = "ra", y = "del_ra")
+
+    df.plot.scatter(x = "ra", y = "del_ra", c = "phot_bp_mean_mag", s = 3, colormap='viridis')
     plt.savefig(MY_PATH + file + '/delra_' + file + '.png')
-    df.plot.scatter(x = "dec", y = "del_dec")
+
+    df.plot.scatter(x = "dec", y = "del_dec", c = "phot_bp_mean_mag", s = 3, colormap='viridis')
     plt.savefig(MY_PATH + file + '/deldec_' + file + '.png')
-    df.plot.scatter(x = "phot_bp_mean_mag", y = "Magnitude")
+
+    df.plot.scatter(x = "phot_bp_mean_mag", y = "Magnitude", c = "diff", s = 3, colormap='viridis')
     plt.savefig(MY_PATH + file + '/mag_' + file + '.png')
-    df.plot.scatter(x = "phot_bp_mean_mag", y = "del_ra")
-    plt.savefig(MY_PATH + file + '/111_' + file + '.png')
-    df.plot.scatter(x = "phot_bp_mean_mag", y = "del_dec")
-    plt.savefig(MY_PATH + file + '/222_' + file + '.png')
+
     #write txt with data info
     file1 = open(MY_PATH + file + '/' + file + "_stats.txt", "a") 
     file1.write("---------------------RMS-----------------------\n")
     file1.write("Removed " + ("%.3f" % (1 - len_after/len_before)) + "% of data\n")
-    file1.write(get_rms(df, "del_ra", "deg", dpp, "pixel"))
-    file1.write(get_rms(df, "del_dec", "deg", dpp, "pixel"))
-    file1.write(get_rms(df, "del_mag"))
+    file1.write(get_rms(df, "del_ra", "arcsec", dpp, "pixel"))
+    file1.write(get_rms(df, "del_dec", "arcsec", dpp, "pixel"))
     file1.close() 
 
 
@@ -149,10 +148,10 @@ def get_rms(df, col, unit = "", conv_f = None, conv_unit = None):
     '''
     rms = ((df[col] - df[col].mean()) ** 2).mean() ** .5
     if conv_f == None: 
-        return (col + ": " + str(rms) + " "+ unit + "\n")
+        return (col + ": " + ("%.3f" % rms) + " "+ unit + "\n")
     else:
         conv = rms/conv_f
-        return (col + ": " + str(rms) + " "+ unit + \
+        return (col + ": " + ("%.3f" % rms) + " "+ unit + \
             "(" + ("%.3f" % conv) + " " + conv_unit + ")" + "\n")
 
 
@@ -175,9 +174,9 @@ def run_next_step(question):
 
 
 def graph_matching(file, apt, gaia):
-    apt.plot.scatter(x = "CentroidRA", y = "CentroidDec")
+    apt.plot.scatter(x = "CentroidRA", y = "CentroidDec", s = 3)
     plt.savefig(MY_PATH + file + '/apt_' + file + '.png')
-    gaia.plot.scatter(x = "ra", y = "dec", c = 'red')
+    gaia.plot.scatter(x = "ra", y = "dec", c = 'red', s = 3)
     plt.savefig(MY_PATH + file + '/gaia_' + file + '.png')
     # ratio = 0.8
     # fig = plt.figure(figsize=(60,20/ratio))
