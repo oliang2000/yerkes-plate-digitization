@@ -183,29 +183,6 @@ def graph_matching(file, apt, gaia):
     plt.savefig(MY_PATH + file + '/apt_' + file + '.png')
     gaia.plot.scatter(x = "ra", y = "dec", c = 'red', s = 3)
     plt.savefig(MY_PATH + file + '/gaia_' + file + '.png')
-    # ratio = 0.8
-    # fig = plt.figure(figsize=(60,20/ratio))
-    # title = fig.suptitle("Plate #"+file, fontsize = 25)
-    # fig.subplots_adjust(top=0.85, wspace=0.3, hspace=0.5)
-    # ax1 = fig.add_subplot(131)
-    # plt.scatter(apt["CentroidRA"], apt["CentroidDec"], s = 3)
-    # plt.xlabel("RA")
-    # plt.ylabel("Dec")
-    # ax1.title.set_text('APT')
-    # ax2 = fig.add_subplot(132)
-    # plt.scatter(gaia["ra"], gaia["dec"], s = 3, c = '#fd7f28')
-    # plt.xlabel("RA")
-    # plt.ylabel("Dec")
-    # ax2.title.set_text('GAIA')
-    # ax3 = fig.add_subplot(133)
-    # plt.scatter(apt["CentroidRA"], apt["CentroidDec"], alpha = 0.4, s = 3)
-    # plt.scatter(gaia["ra"], gaia["dec"], alpha = 0.4, s = 3)
-    # plt.xlabel("RA")
-    # plt.ylabel("Dec")
-    # ax3.title.set_text('APT vs. GAIA')
-    #plt.savefig(MY_PATH + file + '/match_' + file + '.png')
-    # plt.close()
-
 
 
 def p_scatter(file, df1, df2, x, y, xlim =[0,0] , ylim=[0,0], lr1 = False, lr2 = False):
