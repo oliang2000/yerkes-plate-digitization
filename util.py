@@ -123,13 +123,18 @@ def analyze_data(df, file, dpp):
     plt.savefig(MY_PATH + file + '/hist2_' + file + '.png')
 
     df.plot.scatter(x = "ra", y = "del_ra", c = "phot_bp_mean_mag", s = 3, colormap='viridis')
-    plt.savefig(MY_PATH + file + '/delra_' + file + '.png')
+    plt.xticks(rotation=45)
+    #horizontalalignment='right',
+    #fontweight='light',
+    #fontsize='medium',
+    plt.savefig(MY_PATH + file + '/delra_' + file + '.png', dpi = 300)
 
     df.plot.scatter(x = "dec", y = "del_dec", c = "phot_bp_mean_mag", s = 3, colormap='viridis')
-    plt.savefig(MY_PATH + file + '/deldec_' + file + '.png')
+    plt.xticks(rotation=45)
+    plt.savefig(MY_PATH + file + '/deldec_' + file + '.png', dpi = 300)
 
     df.plot.scatter(x = "phot_bp_mean_mag", y = "Magnitude", c = "diff", s = 3, colormap='viridis')
-    plt.savefig(MY_PATH + file + '/mag_' + file + '.png')
+    plt.savefig(MY_PATH + file + '/mag_' + file + '.png', dpi = 300)
 
     #write txt with data info
     file1 = open(MY_PATH + file + '/' + file + "_stats.txt", "a") 
