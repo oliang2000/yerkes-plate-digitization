@@ -90,8 +90,8 @@ def match_two_tables(gaia, apt, file):
         df = df.sort_values('diff').drop_duplicates('ra')
         df = df.sort_values('diff').drop_duplicates('CentroidRA')
         df = df.reset_index(drop=True) 
-        df['del_ra'] = df.apply(lambda row: (row.ra - row.CentroidRA) * 3600, axis = 1)
-        df['del_dec'] = df.apply(lambda row: (row.dec - row.CentroidDec) * 3600, axis = 1)
+        df['del_ra'] = df.apply(lambda row: (row.CentroidRA - row.ra) * 3600, axis = 1)
+        df['del_dec'] = df.apply(lambda row: (row.CentroidDec - row.dec) * 3600, axis = 1)
 
         export_csv = df.to_csv(MY_PATH + file + '/' + file + "_match.csv", index = None, header=True)
 
