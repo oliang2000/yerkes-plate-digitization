@@ -90,8 +90,10 @@ def match_two_tables(gaia, apt, file):
         df = df.sort_values('diff').drop_duplicates('ra')
         df = df.sort_values('diff').drop_duplicates('CentroidRA')
         df = df.reset_index(drop=True) 
-        df['del_ra'] = df.apply(lambda row: (row.CentroidRA - row.ra) * 3600, axis = 1)
+        df['del_ra'] = df.apply(lambda row: (row.CentroidRA - row.ra) * 3600, axis = 1) #degree -> arcsec
         df['del_dec'] = df.apply(lambda row: (row.CentroidDec - row.dec) * 3600, axis = 1)
+        df['err_ra'] = df['del_ra'] + df['pmra']/10
+        df['err_dec'] = df['del_dec'] + df['pmdec']/10
 
         export_csv = df.to_csv(MY_PATH + file + '/' + file + "_match.csv", index = None, header=True)
 
@@ -135,6 +137,10 @@ def analyze_data(df, file, dpp):
 
     df.plot.scatter(x = "phot_bp_mean_mag", y = "Magnitude", c = "diff", s = 3, colormap='viridis')
     plt.savefig(MY_PATH + file + '/mag_' + file + '.png', dpi = 300)
+
+    plt.clf()
+    plt.quiver(df['ra'], df['dec'], df['err_ra'], df['err_dec'])
+    plt.savefig(MY_PATH + file + '/vector_' + file + '.png', dpi = 300)
 
     #write txt with data info
     file1 = open(MY_PATH + file + '/' + file + "_stats.txt", "a") 
