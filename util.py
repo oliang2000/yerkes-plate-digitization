@@ -94,6 +94,8 @@ def match_two_tables(gaia, apt, file):
         df['del_dec'] = df.apply(lambda row: (row.CentroidDec - row.dec) * 3600, axis = 1)
         df['err_ra'] = df['del_ra'] + df['pmra']/10
         df['err_dec'] = df['del_dec'] + df['pmdec']/10
+        #gaia(pmra, pmdec): mas/yr - milli-second of arc per year (1 milliarcsecond = 10^-3 arcsecond)
+        #apt(del_ra, del_dec): arcs per ~100 years
 
         export_csv = df.to_csv(MY_PATH + file + '/' + file + "_match.csv", index = None, header=True)
 
