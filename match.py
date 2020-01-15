@@ -10,13 +10,13 @@ import os
 
 #Import APT data and get GAIA data
 file = input("Enter file name: ").strip()
-df_apt, df_gaia = util.process_file(file)
+df_apt, df_gaia = util.process_file(file, gaia_brightness = 19)
 #Graph APT and GAIA 
 util.graph_matching(file, df_apt, df_gaia)
 
 #Matching & create graphs
 df = util.match_two_tables(df_gaia, df_apt, file)
-util.analyze_data(df, file, 1.58) #arcsecpp
+util.analyze_data(df, file, 1.59, 68) #arcsecpp
 
 #util.p_scatter(file, df, df_filtered, 'phot_bp_mean_mag', 'Magnitude', lr2 = True)
 #util.p_scatter(file, df, df_filtered, 'ra', 'del_ra')

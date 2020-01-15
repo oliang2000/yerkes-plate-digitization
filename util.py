@@ -8,7 +8,7 @@ import statsmodels.api as sm
 import os
 MY_PATH = os.path.abspath(__file__).replace("util.py", "")
 
-def process_file(file):
+def process_file(file, gaia_brightness = 20):
     '''
     Reads table from apt with selected columns, outputs the table
       prints information about the coordinates.
@@ -39,7 +39,7 @@ def process_file(file):
         print ("GAIA data exists.")
         df_gaia = pd.read_csv(MY_PATH + file + '/' + file+'_gaia.csv')
     else:
-        df_gaia = get_gaia_data(file, min_ra, max_ra, min_dec, max_dec, 20)
+        df_gaia = get_gaia_data(file, min_ra, max_ra, min_dec, max_dec, gaia_brightness)
     return (df_apt, df_gaia)
 
 
@@ -111,7 +111,7 @@ def match_two_tables(gaia, apt, file):
 
 
 
-def analyze_data(df, file, dpp):
+def analyze_data(df, file, dpp, cut_percentage):
 
     #testtt
     df.hist(column='diff', bins = 15)
@@ -119,7 +119,7 @@ def analyze_data(df, file, dpp):
 
     #get data with 68% in RA and Dec
     len_before = len(df)
-    df = df[np.abs(df["diff"]) <= np.percentile(np.abs(df["diff"]), 68)] #
+    df = df[np.abs(df["diff"]) <= np.percentile(np.abs(df["diff"]), cut_percentage)] #
     len_after = len(df)
 
     #figures
@@ -128,9 +128,6 @@ def analyze_data(df, file, dpp):
 
     df.plot.scatter(x = "ra", y = "del_ra", c = "phot_bp_mean_mag", s = 3, colormap='viridis')
     plt.xticks(rotation=45)
-    #horizontalalignment='right',
-    #fontweight='light',
-    #fontsize='medium',
     plt.savefig(MY_PATH + file + '/delra_' + file + '.png', dpi = 300)
 
     df.plot.scatter(x = "dec", y = "del_dec", c = "phot_bp_mean_mag", s = 3, colormap='viridis')
