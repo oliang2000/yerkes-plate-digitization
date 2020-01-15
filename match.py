@@ -7,10 +7,16 @@ import numpy as np
 import util
 import os
 
+file = input("Enter file name: ").strip()
+
+#Invert tiff file
+#invert_tiff(file)
+
+#SExtractor
 
 #Import APT data and get GAIA data
-file = input("Enter file name: ").strip()
 df_apt, df_gaia = util.process_file(file, gaia_brightness = 20)
+
 #Graph APT and GAIA 
 util.graph_matching(file, df_apt, df_gaia)
 

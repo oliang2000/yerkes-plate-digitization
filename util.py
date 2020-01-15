@@ -5,8 +5,36 @@ import scipy
 import numpy as np
 import seaborn as sns
 import statsmodels.api as sm
+from astropy import wcs
+from astropy.io import fits
+import csv
+import sys
+from array import array
 import os
+import math
+
 MY_PATH = os.path.abspath(__file__).replace("util.py", "")
+
+def invert_tiff(filename):
+    '''
+    Inverts a tiff file.
+    '''
+    hdu1 = fits.open(filename + ".fits")
+    data = hdu1[0].data #[0]
+    header = hdu1[0].header
+    sizex = np.int(header['NAXIS1'])
+    sizey = np.int(header['NAXIS2'])
+    bits  = np.int(header['BITPIX'])
+    max = math.pow(2, bits)
+
+    ix = 0
+    jy = 0
+    for jy in range(0, sizey):
+        for ix in range(0, sizex):
+            T = data[jy,ix]
+            data[jy,ix] = (max - 1) - T
+
+    fits.writeto(filename + ".fits", data, header, overwrite=True)
 
 def process_file(file, gaia_brightness = 20):
     '''
@@ -163,23 +191,6 @@ def get_rms(df, col, unit = "", conv_f = None, conv_unit = None):
         conv = rms/conv_f
         return (col + ": " + ("%.3f" % rms) + " "+ unit + \
             "(" + ("%.3f" % conv) + " " + conv_unit + ")" + "\n")
-
-
-
-
-def run_next_step(question):
-    '''
-    Ask whether user would like to proceed to next step.
-    '''
-    inpt = question + " (y/n)? "
-    g = input(inpt)
-    if g == "y":
-        return True
-    elif g == "n":
-        return False
-    else:
-        print("Please enter y/n.")
-        return run_next_step(question)
         
 
 
