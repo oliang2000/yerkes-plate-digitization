@@ -7,22 +7,30 @@ import numpy as np
 import util
 import os
 
+
+gaia_brightness = 18	#max brightness for gaia query
+plate_year = 1901		#year plate was taken
+arcsecpp = 1.59			#arcsec per pixel of plate (from astrometry.net)
+percent_remove = 50		#percentage of data removed
+
+
 file = input("Enter file name: ").strip()
 
 #Invert tiff file
 #invert_tiff(file)
 
 #SExtractor
+#functions here!
 
-#Import APT data and get GAIA data
-df_apt, df_gaia = util.process_file(file, gaia_brightness = 20)
+#Import extracted data(APT and get GAIA data
+df_apt, df_gaia = util.process_file(file = file, gaia_brightness = gaia_brightness, plate_year = plate_year)
 
-#Graph APT and GAIA 
+#Graph extracted and GAIA 
 util.graph_matching(file, df_apt, df_gaia)
 
 #Matching & create graphs
 df = util.match_two_tables(df_gaia, df_apt, file)
-util.analyze_data(df, file, 1.59, 68) #arcsecpp
+util.analyze_data(df, file, arcsecpp, percent_remove) 
 
 
 

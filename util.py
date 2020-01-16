@@ -20,7 +20,7 @@ def invert_tiff(filename):
     Inverts a tiff file.
     '''
     hdu1 = fits.open(filename + ".fits")
-    data = hdu1[0].data #[0]
+    data = hdu1[0].data #[0] if many layer
     header = hdu1[0].header
     sizex = np.int(header['NAXIS1'])
     sizey = np.int(header['NAXIS2'])
@@ -36,10 +36,9 @@ def invert_tiff(filename):
 
     fits.writeto(filename + ".fits", data, header, overwrite=True)
 
-def process_file(file, gaia_brightness = 20):
+def process_file(file, gaia_brightness, plate_year):
     '''
-    Reads table from apt with selected columns, outputs the table
-      prints information about the coordinates.
+    Reads table from apt with selected columns, outputs apt and gaia tables.
     '''
     df_apt = pd.read_csv(MY_PATH + file + '/' + file + '.csv')
     df_apt = df_apt[['CentroidRA', 'CentroidDec','Magnitude', 'MagUncertainty']]
@@ -67,12 +66,12 @@ def process_file(file, gaia_brightness = 20):
         print ("GAIA data exists.")
         df_gaia = pd.read_csv(MY_PATH + file + '/' + file+'_gaia.csv')
     else:
-        df_gaia = get_gaia_data(file, min_ra, max_ra, min_dec, max_dec, gaia_brightness)
+        df_gaia = get_gaia_data(file, min_ra, max_ra, min_dec, max_dec, gaia_brightness, plate_year)
     return (df_apt, df_gaia)
 
 
 
-def get_gaia_data (file, min_ra, max_ra, min_dec, max_dec, brightness):
+def get_gaia_data (file, min_ra, max_ra, min_dec, max_dec, brightness, plate_year):
     '''
     Fetches star data from gaia inside the box given and upper limit of brightness.
     '''
@@ -86,6 +85,13 @@ def get_gaia_data (file, min_ra, max_ra, min_dec, max_dec, brightness):
     job = Gaia.launch_job_async(query)
     r = job.get_results()
     df_gaia = r.to_pandas()
+    #corrected to supposed coordinates @ time of plate
+    #gaia(pmra, pmdec) units: mas/yr - milli-second of arc per year (1 milliarcsecond = 10^-3 arcsecond)
+    df_gaia['pmra'].fillna(0, inplace=True)
+    df_gaia['pmdec'].fillna(0, inplace=True)
+    df_gaia['ra_cor'] = df_gaia['ra'] - (2015 - plate_year) * df_gaia['pmra'] / 1000 / 3600
+    df_gaia['dec_cor'] = df_gaia['dec'] - (2015 - plate_year) * df_gaia['pmdec'] / 1000 / 3600
+    #save file
     gaia_name = file+"_gaia.csv"
     export_csv = df_gaia.to_csv(MY_PATH + file + '/' + gaia_name, index = None, header=True)
     print("File saved as", gaia_name)
@@ -99,15 +105,15 @@ def match_two_tables(gaia, apt, file):
         df = pd.read_csv(MY_PATH + file + '/' + file+'_match.csv')
     else:
         print("Start matching GAIA and APT data...")
-        df = pd.DataFrame(columns=['ra','dec','phot_bp_mean_mag','pmra','pmdec',\
+        df = pd.DataFrame(columns=['ra_cor','dec_cor','phot_bp_mean_mag','pmra','pmdec',\
                                    'CentroidRA','CentroidDec','Magnitude','diff'])
-        dist = scipy.spatial.distance.cdist(apt[['CentroidRA', 'CentroidDec']], gaia[['ra', 'dec']])
+        dist = scipy.spatial.distance.cdist(apt[['CentroidRA', 'CentroidDec']], gaia[['ra_cor', 'dec_cor']])
         min_dist = np.argmin(dist, axis=1)
 
         m = 0
         while m < len(apt):
             n = min_dist[m]
-            df = df.append({'ra': gaia['ra'][n], 'dec': gaia['dec'][n],\
+            df = df.append({'ra_cor': gaia['ra_cor'][n], 'dec_cor': gaia['dec_cor'][n],\
                             'phot_bp_mean_mag': gaia['phot_bp_mean_mag'][n],\
                             'pmra': gaia['pmra'][n], 'pmdec': gaia['pmdec'][n],\
                             'CentroidRA': apt['CentroidRA'][m],'CentroidDec': apt['CentroidDec'][m],\
@@ -115,20 +121,13 @@ def match_two_tables(gaia, apt, file):
                             'diff': dist[m][n]
                            }, ignore_index=True)
             m+=1
-        df = df.sort_values('diff').drop_duplicates('ra')
+        df = df.sort_values('diff').drop_duplicates('ra_cor')
         df = df.sort_values('diff').drop_duplicates('CentroidRA')
         df = df.reset_index(drop=True) 
-        df['del_ra'] = df.apply(lambda row: (row.CentroidRA - row.ra) * 3600, axis = 1) #degree -> arcsec
-        df['del_dec'] = df.apply(lambda row: (row.CentroidDec - row.dec) * 3600, axis = 1)
-        df['err_ra'] = df['del_ra'] + df['pmra']/10
-        df['err_dec'] = df['del_dec'] + df['pmdec']/10
-        #gaia(pmra, pmdec): mas/yr - milli-second of arc per year (1 milliarcsecond = 10^-3 arcsecond)
-        #apt(del_ra, del_dec): arcs per ~100 years
-
+        df['del_ra'] = df.apply(lambda row: (row.CentroidRA - row.ra_cor) * 3600, axis = 1) #degree -> arcsec
+        df['del_dec'] = df.apply(lambda row: (row.CentroidDec - row.dec_cor) * 3600, axis = 1)
         export_csv = df.to_csv(MY_PATH + file + '/' + file + "_match.csv", index = None, header=True)
-
         print("Matching finished.")
-
     file1 = open(MY_PATH + file + '/' + file + "_stats.txt", "a") 
     file1.write("--------------------MATCH----------------------\n")
     file1.write("APT: " + str(len(apt)) + "\n")
@@ -144,21 +143,19 @@ def analyze_data(df, file, dpp, cut_percentage):
     #testtt
     df.hist(column='diff', bins = 15)
     plt.savefig(MY_PATH + file + '/hist1_' + file + '.png')
-
     #get data with 68% in RA and Dec
     len_before = len(df)
     df = df[np.abs(df["diff"]) <= np.percentile(np.abs(df["diff"]), cut_percentage)] #
     len_after = len(df)
-
     #figures
     df.hist(column='diff', bins = 15)
     plt.savefig(MY_PATH + file + '/hist2_' + file + '.png')
 
-    df.plot.scatter(x = "ra", y = "del_ra", c = "phot_bp_mean_mag", s = 3, colormap='viridis')
+    df.plot.scatter(x = "ra_cor", y = "del_ra", c = "phot_bp_mean_mag", s = 3, colormap='viridis')
     plt.xticks(rotation=45)
     plt.savefig(MY_PATH + file + '/delra_' + file + '.png', dpi = 300)
 
-    df.plot.scatter(x = "dec", y = "del_dec", c = "phot_bp_mean_mag", s = 3, colormap='viridis')
+    df.plot.scatter(x = "dec_cor", y = "del_dec", c = "phot_bp_mean_mag", s = 3, colormap='viridis')
     plt.xticks(rotation=45)
     plt.savefig(MY_PATH + file + '/deldec_' + file + '.png', dpi = 300)
 
@@ -166,9 +163,8 @@ def analyze_data(df, file, dpp, cut_percentage):
     plt.savefig(MY_PATH + file + '/mag_' + file + '.png', dpi = 300)
 
     plt.clf()
-    plt.quiver(df['ra'], df['dec'], df['err_ra'], df['err_dec'])
+    plt.quiver(df['ra_cor'], df['dec_cor'], df['del_ra'], df['del_dec'])
     plt.savefig(MY_PATH + file + '/vector_' + file + '.png', dpi = 300)
-
     #write txt with data info
     file1 = open(MY_PATH + file + '/' + file + "_stats.txt", "a") 
     file1.write("---------------------RMS-----------------------\n")
@@ -197,7 +193,7 @@ def get_rms(df, col, unit = "", conv_f = None, conv_unit = None):
 def graph_matching(file, apt, gaia):
     apt.plot.scatter(x = "CentroidRA", y = "CentroidDec", s = 3)
     plt.savefig(MY_PATH + file + '/apt_' + file + '.png')
-    gaia.plot.scatter(x = "ra", y = "dec", c = 'red', s = 3)
+    gaia.plot.scatter(x = "ra_cor", y = "dec_cor", c = 'red', s = 3)
     plt.savefig(MY_PATH + file + '/gaia_' + file + '.png')
 
 
