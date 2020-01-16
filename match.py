@@ -26,10 +26,17 @@ file = input("Enter file name: ").strip()
 df_apt, df_gaia = util.process_file(file = file, gaia_brightness = gaia_brightness, plate_year = plate_year)
 
 #Graph extracted and GAIA 
-util.graph_matching(file, df_apt, df_gaia)
+util.graph_data_distr(file, df_apt, df_gaia)
 
 #Matching & create graphs
 df = util.match_two_tables(df_gaia, df_apt, file)
+util.analyze_data(df, file, arcsecpp, percent_remove, graph = False) 
+
+#Correct by wiggles
+df_apt = util.correct_scanner_wiggle(df_apt, df, 7)
+
+#match again
+df = util.match_two_tables(df_gaia, df_apt, file, True)
 util.analyze_data(df, file, arcsecpp, percent_remove) 
 
 
