@@ -17,10 +17,11 @@ For a given .csv file (of star data extracted from plate), fetches star data of 
   - Calculation methods:  *unfinished*
 
 To use:  
-1. Create a folder inside the same folder containing match.py & utility.py, this folder should be named the plate name, which will be used in created .csv files and figures in this program
-2. The folder should contain .csv file with extraction data from the plate containing information about stars' RA, Dec, and magnitude. The default settings reads table from APT
-3. Run *python match.py* in terminal, inside the folder containing match.py & utility.py
-4. Proceed according to terminal instruction, figures will be produced in the folder with .csv file
+1. Pass the plate image twice in astrometry.net to get .fits file, and use APT to extract data and save that in a .csv
+2. Create a folder inside the same folder containing match.py & utility.py, this folder should be named the plate name, which will be used in created .csv files and figures in this program
+3. The folder should contain .csv file with extraction data from the plate containing information about stars' RA, Dec, and magnitude. The default settings reads table from APT
+4. Run *python match.py* in terminal, inside the folder containing match.py & utility.py
+5. Enter folder name, figures will be produced in the folder with .csv file
 
 **Packages**  
 
