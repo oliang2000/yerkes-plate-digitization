@@ -36,14 +36,14 @@ util.graph_data_distr(file, df_apt, df_gaia)
 
 #Matching & create graphs
 df = util.match_two_tables(df_gaia, df_apt, file)
-util.analyze_data(df, file, arcsecpp, cut_percent, graph = True) 
+util.analyze_data(df, file, arcsecpp, cut_percent, graph = False) 
 
 #Correct by wiggles
-#df_apt = util.correct_scanner_wiggle(file, df_apt, df, polycor_order, cut_percent)
+df_apt = util.correct_scanner_wiggle(file, df_apt, df, polycor_order, cut_percent)
 
 #match again
-#df = util.match_two_tables(df_gaia, df_apt, file, True)
-#util.analyze_data(df, file, arcsecpp, cut_percent) 
+df = util.match_two_tables(df_gaia, df_apt, file, True)
+util.analyze_data(df, file, arcsecpp, cut_percent) 
 
 
 

@@ -151,6 +151,7 @@ def correct_scanner_wiggle(file, apt, df, order, cut_percentage):
     plt.clf()
     plt.scatter(df['CentroidDec'], p(df['CentroidDec']), s = 1)
     plt.scatter(df['CentroidDec'], df['del_dec'], s = 1, c = df['diff'], alpha = 0.4)
+    plt.xticks(rotation=45)
     plt.savefig(MY_PATH + file + '/deldec_cor' + file + '.png', dpi = 300, bbox_inches="tight")
 
     z = np.polyfit(df['CentroidRA'], df['del_ra'], order)
@@ -159,6 +160,7 @@ def correct_scanner_wiggle(file, apt, df, order, cut_percentage):
     plt.clf()
     plt.scatter(df['CentroidRA'], p(df['CentroidRA']), s = 2)
     plt.scatter(df['CentroidRA'], df['del_ra'], s = 1, c = df['diff'], alpha = 0.4)
+    plt.xticks(rotation=45)
     plt.savefig(MY_PATH + file + '/delra_cor' + file + '.png', dpi = 300, bbox_inches="tight")
 
     print("Corrected for scanner wiggles.")
@@ -187,11 +189,12 @@ def analyze_data(df, file, dpp, cut_percentage, graph = True):
         plt.xticks(rotation=45)
         plt.savefig(MY_PATH + file + '/deldec_' + file + '.png', dpi = 300, bbox_inches="tight")
 
-        df.plot.scatter(x = "phot_bp_mean_mag", y = "Magnitude", c = "diff", s = 3, colormap='viridis')
+        df.plot.scatter(x = "Magnitude", y = "phot_bp_mean_mag", c = "diff", s = 3, colormap='viridis')
         plt.savefig(MY_PATH + file + '/mag_' + file + '.png', dpi = 300, bbox_inches="tight")
 
         plt.clf()
-        plt.quiver(df['ra_cor'], df['dec_cor'], df['del_ra'], df['del_dec'])
+        plt.quiver( - df['ra_cor'], - df['dec_cor'], df['del_ra'], df['del_dec'])
+        plt.xticks(rotation=45)
         plt.savefig(MY_PATH + file + '/vector_' + file + '.png', dpi = 300, bbox_inches="tight")
     else:
         len_before = len(df)
