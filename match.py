@@ -8,11 +8,17 @@ import util
 import os
 
 
-gaia_brightness = 18	#max brightness for gaia query
-plate_year = 1901		#year plate was taken
+gaia_brightness = 20	#max brightness for gaia query
+plate_year = 1915		#year plate was taken
 arcsecpp = 1.59			#arcsec per pixel of plate (from astrometry.net)
-percent_remove = 50		#percentage of data removed
+cut_percent = 32		#percentage of data not being cut
+polycor_order = 5		#order of correction for wiggles
 
+font = {#'family' : 'normal',
+        'weight' : 'medium',
+        'size'   : 12.5}
+
+plt.rc('font', **font)
 
 file = input("Enter file name: ").strip()
 
@@ -30,14 +36,14 @@ util.graph_data_distr(file, df_apt, df_gaia)
 
 #Matching & create graphs
 df = util.match_two_tables(df_gaia, df_apt, file)
-util.analyze_data(df, file, arcsecpp, percent_remove, graph = False) 
+util.analyze_data(df, file, arcsecpp, cut_percent, graph = True) 
 
 #Correct by wiggles
-df_apt = util.correct_scanner_wiggle(df_apt, df, 7)
+#df_apt = util.correct_scanner_wiggle(file, df_apt, df, polycor_order, cut_percent)
 
 #match again
-df = util.match_two_tables(df_gaia, df_apt, file, True)
-util.analyze_data(df, file, arcsecpp, percent_remove) 
+#df = util.match_two_tables(df_gaia, df_apt, file, True)
+#util.analyze_data(df, file, arcsecpp, cut_percent) 
 
 
 

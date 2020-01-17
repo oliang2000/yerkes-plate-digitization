@@ -40,6 +40,8 @@ def process_file(file, gaia_brightness, plate_year):
     '''
     Reads table from apt with selected columns, outputs apt and gaia tables.
     '''
+    
+    assert os.path.isfile(MY_PATH + file + '/' + file + '.csv'), "File does not exist!"
     df_apt = pd.read_csv(MY_PATH + file + '/' + file + '.csv')
     df_apt = df_apt[['CentroidRA', 'CentroidDec','Magnitude', 'MagUncertainty']]
     min_ra = df_apt['CentroidRA'].min()
@@ -87,8 +89,8 @@ def get_gaia_data (file, min_ra, max_ra, min_dec, max_dec, brightness, plate_yea
     df_gaia = r.to_pandas()
     #corrected to supposed coordinates @ time of plate
     #gaia(pmra, pmdec) units: mas/yr - milli-second of arc per year (1 milliarcsecond = 10^-3 arcsecond)
-    df_gaia['pmra'].fillna(0, inplace=True)
-    df_gaia['pmdec'].fillna(0, inplace=True)
+    df_gaia['pmra'].fillna(0, inplace = True)
+    df_gaia['pmdec'].fillna(0, inplace = True)
     df_gaia['ra_cor'] = df_gaia['ra'] - (2015 - plate_year) * df_gaia['pmra'] / 1000 / 3600
     df_gaia['dec_cor'] = df_gaia['dec'] - (2015 - plate_year) * df_gaia['pmdec'] / 1000 / 3600
     #save file
@@ -137,19 +139,27 @@ def match_two_tables(gaia, apt, file, again = False):
     return df
 
 
-def correct_scanner_wiggle(apt, df, order):
+def correct_scanner_wiggle(file, apt, df, order, cut_percentage):
     '''
     Correct CentroidRA and CentroidDec by polyfitting wiggle.
     '''
-    df = df[np.abs(df["diff"]) <= np.percentile(np.abs(df["diff"]), 68)]
+    df = df[np.abs(df["diff"]) <= np.percentile(np.abs(df["diff"]), 100 - cut_percentage)]
 
     z = np.polyfit(df['CentroidDec'], df['del_dec'], order)
     p = np.poly1d(z)
     apt['CentroidDec'] = apt['CentroidDec'] - p(apt['CentroidDec'])/3600
+    plt.clf()
+    plt.scatter(df['CentroidDec'], p(df['CentroidDec']), s = 1)
+    plt.scatter(df['CentroidDec'], df['del_dec'], s = 1, c = df['diff'], alpha = 0.4)
+    plt.savefig(MY_PATH + file + '/deldec_cor' + file + '.png', dpi = 300, bbox_inches="tight")
 
     z = np.polyfit(df['CentroidRA'], df['del_ra'], order)
     p = np.poly1d(z)
     apt['CentroidRA'] = apt['CentroidRA'] - p(apt['CentroidRA'])/3600
+    plt.clf()
+    plt.scatter(df['CentroidRA'], p(df['CentroidRA']), s = 2)
+    plt.scatter(df['CentroidRA'], df['del_ra'], s = 1, c = df['diff'], alpha = 0.4)
+    plt.savefig(MY_PATH + file + '/delra_cor' + file + '.png', dpi = 300, bbox_inches="tight")
 
     print("Corrected for scanner wiggles.")
 
@@ -159,29 +169,34 @@ def correct_scanner_wiggle(apt, df, order):
 def analyze_data(df, file, dpp, cut_percentage, graph = True):
     if graph == True:
         df.hist(column='diff', bins = 15)
-        plt.savefig(MY_PATH + file + '/hist1_' + file + '.png')
+        plt.savefig(MY_PATH + file + '/hist1_' + file + '.png', bbox_inches="tight")
         #get data with 68% in RA and Dec
         len_before = len(df)
-        df = df[np.abs(df["diff"]) <= np.percentile(np.abs(df["diff"]), cut_percentage)] #
+        df = df[np.abs(df["diff"]) <= np.percentile(np.abs(df["diff"]), 100 - cut_percentage)] #
         len_after = len(df)
         #figures
         df.hist(column='diff', bins = 15)
-        plt.savefig(MY_PATH + file + '/hist2_' + file + '.png')
+        plt.xticks(rotation=45)
+        plt.savefig(MY_PATH + file + '/hist2_' + file + '.png', bbox_inches="tight")
 
         df.plot.scatter(x = "ra_cor", y = "del_ra", c = "phot_bp_mean_mag", s = 3, colormap='viridis')
         plt.xticks(rotation=45)
-        plt.savefig(MY_PATH + file + '/delra_' + file + '.png', dpi = 300)
+        plt.savefig(MY_PATH + file + '/delra_' + file + '.png', dpi = 300, bbox_inches="tight")
 
         df.plot.scatter(x = "dec_cor", y = "del_dec", c = "phot_bp_mean_mag", s = 3, colormap='viridis')
         plt.xticks(rotation=45)
-        plt.savefig(MY_PATH + file + '/deldec_' + file + '.png', dpi = 300)
+        plt.savefig(MY_PATH + file + '/deldec_' + file + '.png', dpi = 300, bbox_inches="tight")
 
         df.plot.scatter(x = "phot_bp_mean_mag", y = "Magnitude", c = "diff", s = 3, colormap='viridis')
-        plt.savefig(MY_PATH + file + '/mag_' + file + '.png', dpi = 300)
+        plt.savefig(MY_PATH + file + '/mag_' + file + '.png', dpi = 300, bbox_inches="tight")
 
         plt.clf()
         plt.quiver(df['ra_cor'], df['dec_cor'], df['del_ra'], df['del_dec'])
-        plt.savefig(MY_PATH + file + '/vector_' + file + '.png', dpi = 300)
+        plt.savefig(MY_PATH + file + '/vector_' + file + '.png', dpi = 300, bbox_inches="tight")
+    else:
+        len_before = len(df)
+        df = df[np.abs(df["diff"]) <= np.percentile(np.abs(df["diff"]), 100 - cut_percentage)] #
+        len_after = len(df)
     #write txt with data info
     file1 = open(MY_PATH + file + '/' + file + "_stats.txt", "a") 
     file1.write("---------------------RMS-----------------------\n")
@@ -209,9 +224,9 @@ def get_rms(df, col, unit = "", conv_f = None, conv_unit = None):
 
 def graph_data_distr(file, apt, gaia):
     apt.plot.scatter(x = "CentroidRA", y = "CentroidDec", s = 3)
-    plt.savefig(MY_PATH + file + '/apt_' + file + '.png')
+    plt.savefig(MY_PATH + file + '/apt_' + file + '.png', bbox_inches="tight")
     gaia.plot.scatter(x = "ra_cor", y = "dec_cor", c = 'red', s = 3)
-    plt.savefig(MY_PATH + file + '/gaia_' + file + '.png')
+    plt.savefig(MY_PATH + file + '/gaia_' + file + '.png', bbox_inches="tight")
 
 
 def p_scatter(file, df1, df2, x, y, xlim =[0,0] , ylim=[0,0], lr1 = False, lr2 = False):
