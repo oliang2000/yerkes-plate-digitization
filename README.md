@@ -29,4 +29,10 @@ To use:
 
 **References**  
 [1] https://www.astromatic.net/software/sextractor   
-[2] vhkjlk
+
+**To do**
+- Extract background by minusing the stars
+- Correct for color (how?)
+- Compare to different catalogs
+- Radio dependency
+
