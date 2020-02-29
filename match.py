@@ -9,7 +9,7 @@ import os
 
 
 gaia_brightness = 20	#max brightness for gaia query
-plate_year = 1915		#year plate was taken
+plate_year = 1915		#year plate was taken (to calculate proper motion)
 arcsecpp = 1.59			#arcsec per pixel of plate (from astrometry.net)
 cut_percent = 32		#percentage of data not being cut
 polycor_order = 5		#order of correction for wiggles
@@ -36,7 +36,7 @@ util.graph_data_distr(file, df_apt, df_gaia)
 
 #Matching & create graphs
 df = util.match_two_tables(df_gaia, df_apt, file)
-util.analyze_data(df, file, arcsecpp, cut_percent, graph = False) 
+util.analyze_data(df, file, arcsecpp, cut_percent, graph = True) 
 
 #Correct by wiggles
 df_apt = util.correct_scanner_wiggle(file, df_apt, df, polycor_order, cut_percent)
