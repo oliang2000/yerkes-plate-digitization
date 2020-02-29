@@ -78,12 +78,21 @@ def get_gaia_data (file, min_ra, max_ra, min_dec, max_dec, brightness, plate_yea
     Fetches star data from gaia inside the box given and upper limit of brightness.
     '''
     print("Getting data from GAIA...")
-    query = "SELECT ALL gaia_source.source_id,gaia_source.ra,gaia_source.dec,\
-    gaia_source.pmra,gaia_source.pmdec,gaia_source.phot_bp_mean_mag FROM gaiadr2.gaia_source WHERE CONTAINS\
-    (POINT('ICRS',gaiadr2.gaia_source.ra,gaiadr2.gaia_source.dec),BOX('ICRS'," + \
+    # query = "SELECT ALL gaia_source.source_id,gaia_source.ra,gaia_source.dec,\
+    # gaia_source.pmra,gaia_source.pmdec,gaia_source.phot_bp_mean_mag FROM gaiadr2.gaia_source WHERE CONTAINS\
+    # (POINT('ICRS',gaiadr2.gaia_source.ra,gaiadr2.gaia_source.dec),BOX('ICRS'," + \
+    # str((min_ra + max_ra)/2) + "," + str((min_dec + max_dec)/2) + "," + \
+    # str(max_ra - min_ra) + "," + str(max_dec - min_dec) + "))=1 AND \
+    # (gaiadr2.gaia_source.phot_bp_mean_mag<=" + str(brightness) + ")" 
+
+    query = "SELECT ALL g.source_id, g.ra, g.dec, g.pmra, g.pmdec, g.phot_bp_mean_mag,\
+    g.phot_bp_mean_mag, g.phot_rp_mean_mag FROM gaiadr2.gaia_source AS g WHERE CONTAINS\
+    (POINT('ICRS', g.ra, g.dec),BOX('ICRS'," + \
     str((min_ra + max_ra)/2) + "," + str((min_dec + max_dec)/2) + "," + \
     str(max_ra - min_ra) + "," + str(max_dec - min_dec) + "))=1 AND \
     (gaiadr2.gaia_source.phot_bp_mean_mag<=" + str(brightness) + ")" 
+
+
     job = Gaia.launch_job_async(query)
     r = job.get_results()
     df_gaia = r.to_pandas()
@@ -107,7 +116,7 @@ def match_two_tables(gaia, apt, file, again = False):
         df = pd.read_csv(MY_PATH + file + '/' + file+'_match.csv')
     else:
         print("Start matching GAIA and APT data...")
-        df = pd.DataFrame(columns=['ra_cor','dec_cor','phot_bp_mean_mag','pmra','pmdec',\
+        df = pd.DataFrame(columns=['ra', 'dec', 'source_id', 'ra_cor','dec_cor','phot_bp_mean_mag','pmra','pmdec',\
                                    'CentroidRA','CentroidDec','Magnitude','diff'])
         dist = scipy.spatial.distance.cdist(apt[['CentroidRA', 'CentroidDec']], gaia[['ra_cor', 'dec_cor']])
         min_dist = np.argmin(dist, axis=1)
@@ -115,7 +124,8 @@ def match_two_tables(gaia, apt, file, again = False):
         m = 0
         while m < len(apt):
             n = min_dist[m]
-            df = df.append({'ra_cor': gaia['ra_cor'][n], 'dec_cor': gaia['dec_cor'][n],\
+            df = df.append({'ra': gaia['ra'][n], 'dec': gaia['dec'][n], 'source_id': gaia['source_id'][n],\
+                            'ra_cor': gaia['ra_cor'][n], 'dec_cor': gaia['dec_cor'][n],\
                             'phot_bp_mean_mag': gaia['phot_bp_mean_mag'][n],\
                             'pmra': gaia['pmra'][n], 'pmdec': gaia['pmdec'][n],\
                             'CentroidRA': apt['CentroidRA'][m],'CentroidDec': apt['CentroidDec'][m],\
