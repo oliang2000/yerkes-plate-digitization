@@ -36,6 +36,7 @@ def invert_tiff(filename):
 
     fits.writeto(filename + ".fits", data, header, overwrite=True)
 
+
 def process_file(file, gaia_brightness, plate_year):
     '''
     Reads table from apt with selected columns, outputs apt and gaia tables.
@@ -78,20 +79,14 @@ def get_gaia_data (file, min_ra, max_ra, min_dec, max_dec, brightness, plate_yea
     Fetches star data from gaia inside the box given and upper limit of brightness.
     '''
     print("Getting data from GAIA...")
-    # query = "SELECT ALL gaia_source.source_id,gaia_source.ra,gaia_source.dec,\
-    # gaia_source.pmra,gaia_source.pmdec,gaia_source.phot_bp_mean_mag FROM gaiadr2.gaia_source WHERE CONTAINS\
-    # (POINT('ICRS',gaiadr2.gaia_source.ra,gaiadr2.gaia_source.dec),BOX('ICRS'," + \
-    # str((min_ra + max_ra)/2) + "," + str((min_dec + max_dec)/2) + "," + \
-    # str(max_ra - min_ra) + "," + str(max_dec - min_dec) + "))=1 AND \
-    # (gaiadr2.gaia_source.phot_bp_mean_mag<=" + str(brightness) + ")" 
 
-    query = "SELECT ALL g.source_id, g.ra, g.dec, g.pmra, g.pmdec, g.phot_bp_mean_mag,\
-    g.phot_bp_mean_mag, g.phot_rp_mean_mag FROM gaiadr2.gaia_source AS g WHERE CONTAINS\
-    (POINT('ICRS', g.ra, g.dec),BOX('ICRS'," + \
+    query = "SELECT ALL gaia_source.source_id, gaia_source.ra, gaia_source.dec,\
+    gaia_source.pmra, gaia_source.pmdec, gaia_source.phot_g_mean_mag, gaia_source.phot_bp_mean_mag\
+    FROM gaiadr2.gaia_source WHERE CONTAINS\
+    (POINT('ICRS',gaiadr2.gaia_source.ra,gaiadr2.gaia_source.dec),BOX('ICRS'," + \
     str((min_ra + max_ra)/2) + "," + str((min_dec + max_dec)/2) + "," + \
     str(max_ra - min_ra) + "," + str(max_dec - min_dec) + "))=1 AND \
     (gaiadr2.gaia_source.phot_bp_mean_mag<=" + str(brightness) + ")" 
-
 
     job = Gaia.launch_job_async(query)
     r = job.get_results()
@@ -111,13 +106,16 @@ def get_gaia_data (file, min_ra, max_ra, min_dec, max_dec, brightness, plate_yea
 
 
 def match_two_tables(gaia, apt, file, again = False):
+    '''
+
+    '''
     if os.path.isfile(MY_PATH + file + '/' + file+'_match.csv') and not again:
         print ("Matching file data exists.")
         df = pd.read_csv(MY_PATH + file + '/' + file+'_match.csv')
     else:
         print("Start matching GAIA and APT data...")
-        df = pd.DataFrame(columns=['ra', 'dec', 'source_id', 'ra_cor','dec_cor','phot_bp_mean_mag','pmra','pmdec',\
-                                   'CentroidRA','CentroidDec','Magnitude','diff'])
+        df = pd.DataFrame(columns=['ra', 'dec', 'source_id', 'ra_cor','dec_cor','phot_bp_mean_mag', 'phot_g_mean_mag'
+            ,'pmra','pmdec', 'CentroidRA','CentroidDec','Magnitude','diff'])
         dist = scipy.spatial.distance.cdist(apt[['CentroidRA', 'CentroidDec']], gaia[['ra_cor', 'dec_cor']])
         min_dist = np.argmin(dist, axis=1)
 
@@ -127,12 +125,13 @@ def match_two_tables(gaia, apt, file, again = False):
             df = df.append({'ra': gaia['ra'][n], 'dec': gaia['dec'][n], 'source_id': gaia['source_id'][n],\
                             'ra_cor': gaia['ra_cor'][n], 'dec_cor': gaia['dec_cor'][n],\
                             'phot_bp_mean_mag': gaia['phot_bp_mean_mag'][n],\
+                            'phot_g_mean_mag': gaia['phot_g_mean_mag'][n],\
                             'pmra': gaia['pmra'][n], 'pmdec': gaia['pmdec'][n],\
                             'CentroidRA': apt['CentroidRA'][m],'CentroidDec': apt['CentroidDec'][m],\
                             'Magnitude': apt['Magnitude'][m],\
                             'diff': dist[m][n]
                            }, ignore_index=True)
-            m+=1
+            m += 1
         df = df.sort_values('diff').drop_duplicates('ra_cor')
         df = df.sort_values('diff').drop_duplicates('CentroidRA')
         df = df.reset_index(drop=True) 
@@ -182,6 +181,17 @@ def analyze_data(df, file, dpp, cut_percentage, graph = True):
     if graph == True:
         df.hist(column='diff', bins = 15)
         plt.savefig(MY_PATH + file + '/hist1_' + file + '.png', bbox_inches="tight")
+
+
+
+        df.hist(column='phot_g_mean_mag', bins = 30)
+        plt.savefig(MY_PATH + file + '/brightness_' + file + '.png', bbox_inches="tight")
+
+
+
+
+
+
         #get data with 68% in RA and Dec
         len_before = len(df)
         df = df[np.abs(df["diff"]) <= np.percentile(np.abs(df["diff"]), 100 - cut_percentage)] #
@@ -272,4 +282,16 @@ def p_scatter(file, df1, df2, x, y, xlim =[0,0] , ylim=[0,0], lr1 = False, lr2 =
     plt.close()
 
 
+
+#SDSS query
+# SELECT ALL
+#    p.objid,p.ra,p.dec,p.u,p.g,p.r,p.i,p.z,
+#    p.run, p.rerun, p.camcol, p.field,
+#    s.specobjid, s.class, s.z as redshift,
+#    s.plate, s.mjd, s.fiberid
+# FROM PhotoObj AS p
+#    JOIN SpecObj AS s ON s.bestobjid = p.objid
+# WHERE 
+#    p.ra BETWEEN  348.029335 AND 349.898045
+#    AND p.dec BETWEEN 5.750175 AND 7.636144
 #distance in space
