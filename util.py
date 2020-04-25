@@ -184,7 +184,7 @@ def analyze_data(df, file, dpp, cut_percentage, graph = True):
 
 
 
-        df.hist(column='phot_g_mean_mag', bins = 30)
+        df.hist(column='phot_bp_mean_mag', bins = 30)
         plt.savefig(MY_PATH + file + '/brightness_' + file + '.png', bbox_inches="tight")
 
 
