@@ -1,3 +1,6 @@
+#make extra file for functions generating figures
+#add SDSS query
+
 from astroquery.gaia import Gaia
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -17,7 +20,11 @@ MY_PATH = os.path.abspath(__file__).replace("util.py", "")
 
 def invert_tiff(filename):
     '''
-    Inverts a tiff file.
+    Inverts a tiff file (with single layer!)
+    Inputs:
+        filename(str): path of the file
+    Outputs:
+        inverted .fits file
     '''
     hdu1 = fits.open(filename + ".fits")
     data = hdu1[0].data #[0] if many layer
@@ -39,7 +46,15 @@ def invert_tiff(filename):
 
 def process_file(file, gaia_brightness, plate_year):
     '''
-    Reads table from apt with selected columns, outputs apt and gaia tables.
+    Reads table from apt with selected columns, extract Gaia data according to that.
+    Inputs:
+        file(str): filename of information extracted from APT
+        gaia_brightness(float): upper limit for brightness of extracted sources in Gaia
+        plate_year(int): year the plate was taken, to correct for proper motion
+    Outputs:
+        .txt file containing basic info about the plate
+    Returns
+        a tuple containing two pandas.dataFrame (df_apt, df_gaia)
     '''
     
     assert os.path.isfile(MY_PATH + file + '/' + file + '.csv'), "File does not exist!"
@@ -74,9 +89,18 @@ def process_file(file, gaia_brightness, plate_year):
 
 
 
-def get_gaia_data (file, min_ra, max_ra, min_dec, max_dec, brightness, plate_year):
+def get_gaia_data(file, min_ra, max_ra, min_dec, max_dec, brightness, plate_year):
     '''
-    Fetches star data from gaia inside the box given and upper limit of brightness.
+    Fetches source data from gaia by given parameters, and correct for proper motion.
+    Inputs:
+        file(str): name of the plate, for saving the data as local file
+        min_ra, max_ra, min_dec, max_dec(float): constraints on coordinates of the extracted sources
+        brightness(float): constraint on the brightness of the extracted sources
+        plate_year(int): year the plate was taken, to correct for proper motion
+    Outputs:
+        .csv file containing the extracted Gaia data
+    Returns:
+        pandas.DataFrame with data extracted from Gaia
     '''
     print("Getting data from GAIA...")
 
@@ -98,7 +122,7 @@ def get_gaia_data (file, min_ra, max_ra, min_dec, max_dec, brightness, plate_yea
     df_gaia['ra_cor'] = df_gaia['ra'] - (2015 - plate_year) * df_gaia['pmra'] / 1000 / 3600
     df_gaia['dec_cor'] = df_gaia['dec'] - (2015 - plate_year) * df_gaia['pmdec'] / 1000 / 3600
     #save file
-    gaia_name = file+"_gaia.csv"
+    gaia_name = file + "_gaia.csv"
     export_csv = df_gaia.to_csv(MY_PATH + file + '/' + gaia_name, index = None, header=True)
     print("File saved as", gaia_name)
     return df_gaia
@@ -107,7 +131,16 @@ def get_gaia_data (file, min_ra, max_ra, min_dec, max_dec, brightness, plate_yea
 
 def match_two_tables(gaia, apt, file, again = False):
     '''
-
+    Matches Gaia and APT data.
+    Inputs:
+        gaia, apt(pandas.DataFrame): Gaia and APT data of the sources
+        file(str): name of the plate
+        again(boolean): if True, the matching happens again despite the existence of a matched .csv
+    Outputs:
+        a .csv file with matched data
+        write in .txt file with more information on number of matches
+    Returns:
+        pandas.DataFrame with matched sources
     '''
     if os.path.isfile(MY_PATH + file + '/' + file+'_match.csv') and not again:
         print ("Matching file data exists.")
@@ -150,7 +183,16 @@ def match_two_tables(gaia, apt, file, again = False):
 
 def correct_scanner_wiggle(file, apt, df, order, cut_percentage):
     '''
-    Correct CentroidRA and CentroidDec by polyfitting wiggle.
+    Correct CentroidRA and CentroidDec(APT) by polyfitting wiggle.
+    Inputs:
+        file(str): name of the file 
+        apt, df(pandas.Dataframe): APT and matched file on the sources
+        order(int): order of the polynomial to fit the curve
+        cut_percentage(int): percentage of data being cut before fitting polynomial
+    Outputs:
+        two .png showing the polyfit of the wiggles
+    Returns:
+        pandas.DataFrame with corrected APT data
     '''
     df = df[np.abs(df["diff"]) <= np.percentile(np.abs(df["diff"]), 100 - cut_percentage)]
 
@@ -246,6 +288,10 @@ def get_rms(df, col, unit = "", conv_f = None, conv_unit = None):
 
 
 def graph_data_distr(file, apt, gaia):
+    '''
+    Plot the position of the sources in Gaia and APT
+    #try overlap this!!
+    '''
     apt.plot.scatter(x = "CentroidRA", y = "CentroidDec", s = 3)
     plt.savefig(MY_PATH + file + '/apt_' + file + '.png', bbox_inches="tight")
     gaia.plot.scatter(x = "ra_cor", y = "dec_cor", c = 'red', s = 3)
