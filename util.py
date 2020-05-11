@@ -226,11 +226,6 @@ def analyze_data(df, file, dpp, cut_percentage, graph = True):
 
 
 
-        df.hist(column='phot_bp_mean_mag', bins = 30)
-        plt.savefig(MY_PATH + file + '/brightness_' + file + '.png', bbox_inches="tight")
-
-
-
 
 
 
@@ -239,6 +234,19 @@ def analyze_data(df, file, dpp, cut_percentage, graph = True):
         df = df[np.abs(df["diff"]) <= np.percentile(np.abs(df["diff"]), 100 - cut_percentage)] #
         len_after = len(df)
         #figures
+
+
+
+
+
+        df.hist(column='phot_bp_mean_mag', bins = 30)
+        plt.savefig(MY_PATH + file + '/brightness_' + file + '.png', bbox_inches="tight")
+
+
+
+
+
+
         df.hist(column='diff', bins = 15)
         plt.xticks(rotation=45)
         plt.savefig(MY_PATH + file + '/hist2_' + file + '.png', bbox_inches="tight")
