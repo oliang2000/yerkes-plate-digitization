@@ -35,6 +35,6 @@ To use:
 - Correct for color (how?)
 - Compare to different catalogs
 - Radio dependency
-- 
+
 
 https://github.com/sciserver/SciScript-Python  
