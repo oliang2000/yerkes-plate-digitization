@@ -7,17 +7,19 @@ import os
 import statsmodels.api as sm
 from statsmodels.graphics.regressionplots import abline_plot
 
-pnum = "R3170"
+pnum = input("Enter plate number: ").strip()  #"R3170"
+year_plate = 1915
+year_sdss = 2019
 
 #generate queries
 apt = pd.read_csv("{0}/{0}.csv".format(pnum))#data from APT
 min_ra, max_ra = min(apt['CentroidRA']), max(apt['CentroidRA'])
 min_dec, max_dec = min(apt['CentroidDec']), max(apt['CentroidDec'])
-query_cal = "select ra, dec, u, g, r, i, z, modelmagerr_u, modelmagerr_g, modelmagerr_r, modelmagerr_i, modelmagerr_z\
+query_cal = "select ra, dec, u, g, r, i, z, modelmagerr_u, modelmagerr_g, modelmagerr_r, modelmagerr_i, modelmagerr_z \
 from star where \
 (ra between {} and {}) and (dec between {} and {}) and modelmag_g < 21.0 and clean = 1".format(min_ra, max_ra, min_dec, max_dec)
 query_qso = "select p.ra, p.dec, s.z, snMedian, p.u, p.g, p.r, p.i, p.z, p.modelmagerr_u, \
-p.modelmagerr_g, p.modelmagerr_r, p.modelmagerr_i, p.modelmagerr_z from photoobj as p, specobj as s\
+p.modelmagerr_g, p.modelmagerr_r, p.modelmagerr_i, p.modelmagerr_z from photoobj as p, specobj as s \
 where p.specobjid = s.specobjid and snMedian > 7.0 and s.class = 'QSO' and \
 (p.ra between {} and {}) and (p.dec between {} and {})".format(min_ra, max_ra, min_dec, max_dec)
 print('\n' + '-------------------Plate {}-----------------'.format(pnum) + '\n')
@@ -86,28 +88,61 @@ if input("Proceed(y/n): ").strip() == 'y':
 
     #measure QSOs and save
     n = 0
-    for ind in df_clean[df_clean['QSO'] == True].index:
-        n += 1
-        qso1_ra, qso1_dec = df_clean.iloc[ind]['ra'], df_clean.iloc[ind]['dec']
-        qso1_pg, qso1_mag = df_clean.iloc[ind]['pg'], df_clean.iloc[ind]['Magnitude']
-        df_cal = df_clean[(df_clean['ra'] <= qso1_ra + 0.2)&(df_clean['ra'] >= qso1_ra - 0.2)\
-            &(df_clean['dec'] <= qso1_dec + 0.2)&(df_clean['dec'] >= qso1_dec - 0.2)
-            &(df_clean['pg'] <= qso1_pg + 1)&(df_clean['pg'] >= qso1_pg - 2)].copy()
-        df_cal = df_cal.dropna(subset=['pg', 'Magnitude'])
-        #create txt file
-        print("\nQSO{} has {} calibration stars".format(n, len(df_cal)))   
+    if len(df_clean[df_clean['QSO'] == True]) == 0:
+        print("No qualifying quasars found.")
+    else:
+        for ind in df_clean[df_clean['QSO'] == True].index:
+            n += 1
+            qso_ra, qso_dec = df_clean.iloc[ind]['ra'], df_clean.iloc[ind]['dec']
+            qso_pg, qso_mag = df_clean.iloc[ind]['pg'], df_clean.iloc[ind]['Magnitude']
+            df_cal = df_clean[(df_clean['ra'] <= qso_ra + 0.2)&(df_clean['ra'] >= qso_ra - 0.2)\
+                &(df_clean['dec'] <= qso_dec + 0.2)&(df_clean['dec'] >= qso_dec - 0.2)
+                &(df_clean['pg'] <= qso_pg + 1)&(df_clean['pg'] >= qso_pg - 2)].copy()
+            df_cal = df_cal.dropna(subset=['pg', 'Magnitude'])
+            #linear fit
+            X = df_cal['Magnitude']
+            X = sm.add_constant(X)
+            y = df_cal['pg']
+            model = sm.OLS(y, X).fit()
+            df_cal['pg_predictions'] = model.predict(X)
+            #plots
+            qsopath = '{0}/qso{1}'.format(pnum, n)
+            if not os.path.exists(qsopath):
+                os.makedirs(qsopath)
 
-        os.makedirs('{0}/qso{1}'.format(pnum, n))
+            fig = abline_plot(model_results = model, color = 'black')
+            ax = fig.axes[0]
+            ax.scatter(df_cal['Magnitude'], df_cal['pg'])
+            ax.scatter([qso_mag], [qso_pg], color = 'red')
+            plt.title("Linear fit for calibration stars, {}".format(pnum))
+            plt.xlabel("APT mag")
+            plt.ylabel("pg")
+            plt.savefig("{0}/qso{1}/{0}_qso_calibration{1}.png".format(pnum, n), bbox_inches="tight")
+            plt.clf()
 
-        plt.figure(figsize = (5, 4))
-        plt.scatter(df_cal['Magnitude'], df_cal['pg'], color = 'black', s = 5, alpha = 0.7)
-        plt.scatter([df_clean.iloc[ind]['Magnitude']], [df_clean.iloc[0]['pg']], color = 'red', s = 10)
-        plt.title("QSO{} and Calibration star for Plate R3107".format(n))
-        plt.xlabel("APT mag")
-        plt.ylabel("pg")
-        plt.savefig("{0}/qso{1}/{0}_qso_calibration{1}.png".format(pnum, n), bbox_inches="tight")
+            df_cal['res'] = df_cal['pg'] - df_cal['pg_predictions']
+            plt.hist(df_cal['res'])
+            plt.title("Histogram for residuals, {}".format(pnum))
+            plt.savefig("{0}/qso{1}/{0}_residual_hist{1}.png".format(pnum, n), bbox_inches="tight")
+            plt.clf()
 
-        #measure, write error + result to bigger folder
+            plt.scatter(df_cal['Magnitude'], df_cal['res'])
+            plt.title("Magnitude vs. residuals, {}".format(pnum))
+            plt.savefig("{0}/qso{1}/{0}_residual_plot{1}.png".format(pnum, n), bbox_inches="tight")
+            plt.clf()
+
+            #create txt file
+            with open("{0}/{0}.txt".format(pnum), 'a') as f:
+                f.write("\n------------------QSO {}-------------------\n".format(n))
+                f.write("\nQSO{} has {} calibration stars".format(n, len(df_cal)) + "\n")
+                low_16, high_84 = (np.quantile(df_cal['res'], 0.16), np.quantile(df_cal['res'], 0.84))
+                qso_mag_measured = df_cal.loc[df_cal['QSO'] == True]['pg_predictions'].values[0]
+
+                f.write("Measured pg from plate({}): {}".format(year_plate, qso_mag_measured) + "\n")
+                f.write("Measured pg from SDSS({}): {}".format(year_sdss, qso_pg) + "\n")
+                f.write("The difference between two measurements are: {}".format(qso_pg - qso_mag_measured) + "\n")
+                f.write("Error for this value (sigma value for residuals): {}".format((high_84 - low_16)/2) + "\n")
+ 
 
 
         
