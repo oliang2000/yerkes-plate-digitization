@@ -16,12 +16,12 @@ apt = pd.read_csv("{0}/{0}.csv".format(pnum))#data from APT
 min_ra, max_ra = min(apt['CentroidRA']), max(apt['CentroidRA'])
 min_dec, max_dec = min(apt['CentroidDec']), max(apt['CentroidDec'])
 query_cal = "select ra, dec, u, g, r, i, z, modelmagerr_u, modelmagerr_g, modelmagerr_r, modelmagerr_i, modelmagerr_z \
-from star where \
-(ra between {} and {}) and (dec between {} and {}) and modelmag_g < 21.0 and clean = 1".format(min_ra, max_ra, min_dec, max_dec)
+from star where (ra between {:.2f} and {:.2f}) and (dec between {:.2f} and {:.2f}) \
+and modelmag_g < 21.0 and clean = 1".format(min_ra, max_ra, min_dec, max_dec)
 query_qso = "select p.ra, p.dec, s.z, snMedian, p.u, p.g, p.r, p.i, p.z, p.modelmagerr_u, \
 p.modelmagerr_g, p.modelmagerr_r, p.modelmagerr_i, p.modelmagerr_z from photoobj as p, specobj as s \
 where p.specobjid = s.specobjid and snMedian > 7.0 and s.class = 'QSO' and \
-(p.ra between {} and {}) and (p.dec between {} and {})".format(min_ra, max_ra, min_dec, max_dec)
+(p.ra between {:.2f} and {:.2f}) and (p.dec between {:.2f} and {:.2f})".format(min_ra, max_ra, min_dec, max_dec)
 print('\n' + '-------------------Plate {}-----------------'.format(pnum) + '\n')
 print('Query data from SDSS: http://skyserver.sdss.org/dr16/en/tools/search/sql.aspx' + '\n')
 print('SDSS Query for Calibration stars (please save the file as {}_cal.csv):'.format(pnum), '\n' + query_cal + '\n' )
@@ -92,11 +92,12 @@ if input("Proceed(y/n): ").strip() == 'y':
         print("No qualifying quasars found.")
     else:
         for ind in df_clean[df_clean['QSO'] == True].index:
+            box_size = 0.2 #box in which calibration stars are selected
             n += 1
             qso_ra, qso_dec = df_clean.iloc[ind]['ra'], df_clean.iloc[ind]['dec']
             qso_pg, qso_mag = df_clean.iloc[ind]['pg'], df_clean.iloc[ind]['Magnitude']
-            df_cal = df_clean[(df_clean['ra'] <= qso_ra + 0.2)&(df_clean['ra'] >= qso_ra - 0.2)\
-                &(df_clean['dec'] <= qso_dec + 0.2)&(df_clean['dec'] >= qso_dec - 0.2)
+            df_cal = df_clean[(df_clean['ra'] <= qso_ra + box_size)&(df_clean['ra'] >= qso_ra - box_size)\
+                &(df_clean['dec'] <= qso_dec + box_size)&(df_clean['dec'] >= qso_dec - box_size)
                 &(df_clean['pg'] <= qso_pg + 1)&(df_clean['pg'] >= qso_pg - 2)].copy()
             df_cal = df_cal.dropna(subset=['pg', 'Magnitude'])
             #linear fit
@@ -138,10 +139,10 @@ if input("Proceed(y/n): ").strip() == 'y':
                 low_16, high_84 = (np.quantile(df_cal['res'], 0.16), np.quantile(df_cal['res'], 0.84))
                 qso_mag_measured = df_cal.loc[df_cal['QSO'] == True]['pg_predictions'].values[0]
 
-                f.write("Measured pg from plate({}): {}".format(year_plate, qso_mag_measured) + "\n")
-                f.write("Measured pg from SDSS({}): {}".format(year_sdss, qso_pg) + "\n")
-                f.write("The difference between two measurements are: {}".format(qso_pg - qso_mag_measured) + "\n")
-                f.write("Error for this value (sigma value for residuals): {}".format((high_84 - low_16)/2) + "\n")
+                f.write("Measured pg from plate({}): {:.4f}".format(year_plate, qso_mag_measured) + "\n")
+                f.write("Measured pg from SDSS({}): {:.4f}".format(year_sdss, qso_pg) + "\n")
+                f.write("The difference between two measurements are: {:.4f}".format(qso_pg - qso_mag_measured) + "\n")
+                f.write("Error for this value (sigma value for residuals): {:.4f}".format((high_84 - low_16)/2) + "\n")
  
 
 
