@@ -28,11 +28,11 @@ print('SDSS Query for Calibration stars (please save the file as {}_cal.csv):'.f
 print('SDSS Query for Quasars (please save the file as {}_qso.csv):'.format(pnum), '\n' + query_qso + '\n')
 
 
+#analyze data
 if input("Proceed(y/n): ").strip() == 'y':
     #import tables
     cal = pd.read_csv("{0}/{0}_cal.csv".format(pnum), skiprows=1)#calibration stars from SDSS
     qso = pd.read_csv("{0}/{0}_qso.csv".format(pnum), skiprows=1)#QSOs from sdss
-
 
     #match tables
     diff_lim = 0.001 #cutoff distance for mismatches
