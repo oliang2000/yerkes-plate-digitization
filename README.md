@@ -32,8 +32,7 @@ To use:
 
 **To do**
 - Extract background by minusing the stars
-- Correct for color (how?)
-- Compare to different catalogs
+- Compare to different catalogs (hook SDSS up to python?)
 - Radio dependency
 
 
