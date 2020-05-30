@@ -89,6 +89,7 @@ if input("Proceed(y/n): ").strip() == 'y':
 
 
     #measure QSOs and save
+    writedata = input("Write data into csv(y/n): ")
     n = 0
     if len(df_clean[df_clean['QSO'] == True]) == 0:
         print("No qualifying quasars found.")
@@ -96,10 +97,11 @@ if input("Proceed(y/n): ").strip() == 'y':
         for ind in df_clean[df_clean['QSO'] == True].index:
             box_size = 0.2 #box in which calibration stars are selected
             n += 1
-            qso_ra, qso_dec = df_clean.iloc[ind]['ra'], df_clean.iloc[ind]['dec']
-            qso_pg, qso_mag = df_clean.iloc[ind]['pg'], df_clean.iloc[ind]['Magnitude']
+            qso_loc = df_clean.iloc[ind]
+            qso_ra, qso_dec, qso_pg, qso_mag = qso_loc['ra'], qso_loc['dec'], qso_loc['pg'], qso_loc['Magnitude']
 
-            qso_z = df_clean.iloc[ind]['pg']
+            qso_z = qso_loc['pg']
+            qso_diff = qso_loc['diff']
 
             df_cal = df_clean[(df_clean['ra'] <= qso_ra + box_size)&(df_clean['ra'] >= qso_ra - box_size)\
                 &(df_clean['dec'] <= qso_dec + box_size)&(df_clean['dec'] >= qso_dec - box_size)
@@ -120,21 +122,21 @@ if input("Proceed(y/n): ").strip() == 'y':
             ax = fig.axes[0]
             ax.scatter(df_cal['Magnitude'], df_cal['pg'])
             ax.scatter([qso_mag], [qso_pg], color = 'red')
-            plt.title("Linear fit for calibration stars, {}".format(pnum))
+            plt.title("Linear fit for calibration stars, qso{0}, {1}".format(n, pnum))
             plt.xlabel("APT mag")
             plt.ylabel("pg")
-            plt.savefig("{0}/qso{1}/{0}_qso_calibration{1}.png".format(pnum, n), bbox_inches="tight")
+            plt.savefig("{0}/qso{1}/{0}_qso{1}_calibration.png".format(pnum, n), bbox_inches="tight")
             plt.clf()
 
             df_cal['res'] = df_cal['pg'] - df_cal['pg_predictions']
             plt.hist(df_cal['res'])
-            plt.title("Histogram for residuals, {}".format(pnum))
-            plt.savefig("{0}/qso{1}/{0}_residual_hist{1}.png".format(pnum, n), bbox_inches="tight")
+            plt.title("Histogram for residuals, qso{0}, {1}".format(n, pnum))
+            plt.savefig("{0}/qso{1}/{0}_qso{1}_residual_hist.png".format(pnum, n), bbox_inches="tight")
             plt.clf()
 
             plt.scatter(df_cal['Magnitude'], df_cal['res'])
-            plt.title("Magnitude vs. residuals, {}".format(pnum))
-            plt.savefig("{0}/qso{1}/{0}_residual_plot{1}.png".format(pnum, n), bbox_inches="tight")
+            plt.title("Magnitude vs. residuals, qso{0}, {1}".format(n, pnum))
+            plt.savefig("{0}/qso{1}/{0}_qso{1}_residual_plot{1}.png".format(pnum, n), bbox_inches="tight")
             plt.clf()
 
             #create txt file
@@ -150,10 +152,11 @@ if input("Proceed(y/n): ").strip() == 'y':
                 f.write("Error for this value (sigma value for residuals): {:.4f}".format((high_84 - low_16)/2) + "\n")
 
             #write into table
-            with open('qso.csv', 'a', newline='') as csvfile: 
-            	f = csv.writer(csvfile) 
-            	f.writerow([qso_ra, qso_dec, df_clean.iloc[ind]['mjd'], list(qso[qso['ra'] == qso_ra]['z'])[0], \
-            		qso_pg, pnum, pdate, qso_mag_measured, qso_mag_measured - qso_pg, "{:.4f}".format((high_84 - low_16)/2)])
+            if writedata == "y":
+                with open('qso.csv', 'a', newline='') as csvfile: 
+                    f = csv.writer(csvfile) 
+                    f.writerow([qso_ra, qso_dec, df_clean.iloc[ind]['mjd'], list(qso[qso['ra'] == qso_ra]['z'])[0], qso_pg, \
+                        pnum, pdate, qso_mag_measured, qso_mag_measured - qso_pg, "{:.4f}".format((high_84 - low_16)/2), qso_diff])
  
 
 
