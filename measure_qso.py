@@ -20,6 +20,7 @@ min_dec, max_dec = min(apt['CentroidDec']), max(apt['CentroidDec'])
 query_cal = "select ra, dec, u, g, r, i, z, modelmagerr_u, modelmagerr_g, modelmagerr_r, modelmagerr_i, modelmagerr_z, mjd \
 from star where (ra between {:.2f} and {:.2f}) and (dec between {:.2f} and {:.2f}) \
 and modelmag_g < 21.0 and clean = 1".format(min_ra, max_ra, min_dec, max_dec)
+#star: http://skyserver.sdss.org/dr7/en/help/browser/browser.asp?n=Star&t=V
 query_qso = "select p.ra, p.dec, s.z, snMedian, p.u, p.g, p.r, p.i, p.z, p.modelmagerr_u, \
 p.modelmagerr_g, p.modelmagerr_r, p.modelmagerr_i, p.modelmagerr_z from photoobj as p, specobj as s \
 where p.specobjid = s.specobjid and snMedian > 7.0 and s.class = 'QSO' and \
@@ -40,7 +41,7 @@ if input("Proceed(y/n): ").strip() == 'y':
     diff_lim = 0.001 #cutoff distance for mismatches
     if input("Match tables(y/n): ").strip() == 'y':
         df = pd.DataFrame(columns=['ra', 'dec', 'u', 'g','r','i', 'z', 'CentroidRA','CentroidDec','Magnitude','diff'])
-        dist = scipy.spatial.distance.cdist(apt[['CentroidRA', 'CentroidDec']], cal[['ra', 'dec']])
+        dist = scipy.spatial.distance.cdist(apt[['CentroidRA', 'CentroidDec']], cal[['ra', 'dec']])*60 #arcmin
         min_dist = np.argmin(dist, axis=1)
         m = 0
         while m < len(apt):
@@ -63,6 +64,7 @@ if input("Proceed(y/n): ").strip() == 'y':
     df_clean = df[df['diff'] <= diff_lim].copy()
     df_clean['QSO'] = (df_clean.ra.isin(qso.ra) & df_clean.dec.isin(qso.dec))
     df_clean['pg'] = df_clean['g'] + 0.3*(df_clean['u'] - df_clean['g']) - 0.45
+
     df_qso = df_clean[df_clean['QSO'] == True].copy()
 
     #plot some figures of the match
