@@ -1,3 +1,9 @@
+#todo
+#Linear fit pg
+#Correct for proper motion
+#Remove outliers
+
+PLATE_YEAR = {'R3060': 19150309, 'R3115': 19150602, 'R3095': 19150416, 'R3170': 19150717, 'R3289': 19151104}
 import pandas as pd
 import scipy
 from scipy.spatial import distance
@@ -7,7 +13,6 @@ import os
 import statsmodels.api as sm
 from statsmodels.graphics.regressionplots import abline_plot
 import csv
-PLATE_YEAR = {'R3060': 19150309, 'R3115': 19150602, 'R3095': 19150416, 'R3170': 19150717, 'R3289': 19151104}
 
 pnum = input("Enter plate number: ").strip()  #"R3170"
 pdate = PLATE_YEAR[pnum]
@@ -39,10 +44,10 @@ if input("Proceed(y/n): ").strip() == 'y':
     qso = pd.read_csv("{0}/{0}_qso.csv".format(pnum), skiprows = 1)#QSOs from sdss
 
     #match tables
-    diff_lim = 0.001 #cutoff distance for mismatches
+    diff_lim = 0.001 #cutoff distance for mismatches, in deg
     if input("Match tables(y/n): ").strip() == 'y':
         df = pd.DataFrame(columns=['ra', 'dec', 'u', 'g','r','i', 'z', 'CentroidRA','CentroidDec','Magnitude','diff'])
-        dist = scipy.spatial.distance.cdist(apt[['CentroidRA', 'CentroidDec']], cal[['ra', 'dec']])
+        dist = scipy.spatial.distance.cdist(apt[['CentroidRA', 'CentroidDec']], cal[['ra', 'dec']]) #deg
         min_dist = np.argmin(dist, axis=1)
         m = 0
         while m < len(apt):
@@ -65,6 +70,23 @@ if input("Proceed(y/n): ").strip() == 'y':
     df_clean = df[df['diff'] <= diff_lim].copy()
     df_clean['QSO'] = (df_clean.ra.isin(qso.ra) & df_clean.dec.isin(qso.dec))
     df_clean['pg'] = df_clean['g'] + 0.3*(df_clean['u'] - df_clean['g']) - 0.45
+    df_clean = df_clean.dropna(subset=['pg', 'Magnitude'])
+    df_clean.reset_index(inplace=True)
+    meanra, meandec = np.mean(df.ra), np.mean(df.dec)
+    df_clean['radial_dist'] = np.sqrt((df_clean.ra - meanra)**2 + (df_clean.dec - meandec)**2)
+
+    #correct for influence of radial dist on brightness (improve this later by combining stuff?)
+    X = df_clean['Magnitude']
+    X = sm.add_constant(X)
+    y = df_clean['pg']
+    model = sm.OLS(y, X).fit()
+    df_clean['pred_pg'] = model.predict(X)
+
+    X = df_clean['radial_dist']
+    X = sm.add_constant(X)
+    y = df_clean['pg'] - df_clean['pred_pg']
+    model = sm.OLS(y, X).fit()
+    df_clean['pg_cor_by_rad'] = model.predict(X)
 
     df_qso = df_clean[df_clean['QSO'] == True].copy()
 
@@ -93,29 +115,33 @@ if input("Proceed(y/n): ").strip() == 'y':
 
     #measure QSOs and save
     writedata = input("Write data into csv(y/n): ")
-    n = 0
     if len(df_clean[df_clean['QSO'] == True]) == 0:
         print("No qualifying quasars found.")
     else:
+        print("{} quasars found.".format(len(df_clean[df_clean['QSO'] == True])))
+        n = 0
         for ind in df_clean[df_clean['QSO'] == True].index:
-            box_size = 0.2 #box in which calibration stars are selected
+            box_size = 0.2 #radius box in which calibration stars are selected
             n += 1
             qso_loc = df_clean.iloc[ind]
             qso_ra, qso_dec, qso_pg, qso_mag = qso_loc['ra'], qso_loc['dec'], qso_loc['pg'], qso_loc['Magnitude']
 
-            qso_z = qso_loc['pg']
             qso_diff = qso_loc['diff']
+            qso_radial_dist = qso_loc['radial_dist']
 
             df_cal = df_clean[(df_clean['ra'] <= qso_ra + box_size)&(df_clean['ra'] >= qso_ra - box_size)\
                 &(df_clean['dec'] <= qso_dec + box_size)&(df_clean['dec'] >= qso_dec - box_size)
                 &(df_clean['pg'] <= qso_pg + 1)&(df_clean['pg'] >= qso_pg - 2)].copy()
-            df_cal = df_cal.dropna(subset=['pg', 'Magnitude'])
+
+
             #linear fit
             X = df_cal['Magnitude']
             X = sm.add_constant(X)
             y = df_cal['pg']
             model = sm.OLS(y, X).fit()
-            df_cal['pg_predictions'] = model.predict(X)
+            df_cal['pg_predictions'] = model.predict(X) + df_cal['pg_cor_by_rad'] #new
+
+
             #plots
             qsopath = '{0}/qso{1}'.format(pnum, n)
             if not os.path.exists(qsopath):
@@ -147,7 +173,9 @@ if input("Proceed(y/n): ").strip() == 'y':
                 f.write("\n------------------QSO {}-------------------\n".format(n))
                 f.write("\nQSO{} has {} calibration stars".format(n, len(df_cal)) + "\n")
                 low_16, high_84 = (np.quantile(df_cal['res'], 0.16), np.quantile(df_cal['res'], 0.84))
-                qso_mag_measured = df_cal.loc[df_cal['QSO'] == True]['pg_predictions'].values[0]
+
+                
+                qso_mag_measured = df_cal[df_cal['QSO'] == True]['pg_predictions'].values[0]
 
                 f.write("Measured pg from plate({}): {:.4f}".format(year_plate, qso_mag_measured) + "\n")
                 f.write("Measured pg from SDSS({}): {:.4f}".format(year_sdss, qso_pg) + "\n")
@@ -159,4 +187,10 @@ if input("Proceed(y/n): ").strip() == 'y':
                 with open('qso.csv', 'a', newline='') as csvfile: 
                     f = csv.writer(csvfile) 
                     f.writerow([qso_ra, qso_dec, df_clean.iloc[ind]['mjd'], list(qso[qso['ra'] == qso_ra]['z'])[0], qso_pg, \
-                        pnum, pdate, qso_mag_measured, qso_mag_measured - qso_pg, "{:.4f}".format((high_84 - low_16)/2), qso_diff])
+                        pnum, pdate, qso_mag_measured, qso_mag_measured - qso_pg, "{:.4f}".format((high_84 - low_16)/2), \
+                        qso_diff, qso_radial_dist])
+ 
+
+
+        
+
