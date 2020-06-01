@@ -7,9 +7,10 @@ import os
 import statsmodels.api as sm
 from statsmodels.graphics.regressionplots import abline_plot
 import csv
+PLATE_YEAR = {'R3060': 19150309, 'R3115': 19150602, 'R3095': 19150416, 'R3170': 19150717, 'R3289': 19151104}
 
 pnum = input("Enter plate number: ").strip()  #"R3170"
-pdate = input("Enter plate date (exp. 19050101): ").strip()
+pdate = PLATE_YEAR[pnum]
 year_plate = 1915
 year_sdss = 2019
 
@@ -41,7 +42,7 @@ if input("Proceed(y/n): ").strip() == 'y':
     diff_lim = 0.001 #cutoff distance for mismatches
     if input("Match tables(y/n): ").strip() == 'y':
         df = pd.DataFrame(columns=['ra', 'dec', 'u', 'g','r','i', 'z', 'CentroidRA','CentroidDec','Magnitude','diff'])
-        dist = scipy.spatial.distance.cdist(apt[['CentroidRA', 'CentroidDec']], cal[['ra', 'dec']])*60 #arcmin
+        dist = scipy.spatial.distance.cdist(apt[['CentroidRA', 'CentroidDec']], cal[['ra', 'dec']])
         min_dist = np.argmin(dist, axis=1)
         m = 0
         while m < len(apt):
@@ -159,8 +160,3 @@ if input("Proceed(y/n): ").strip() == 'y':
                     f = csv.writer(csvfile) 
                     f.writerow([qso_ra, qso_dec, df_clean.iloc[ind]['mjd'], list(qso[qso['ra'] == qso_ra]['z'])[0], qso_pg, \
                         pnum, pdate, qso_mag_measured, qso_mag_measured - qso_pg, "{:.4f}".format((high_84 - low_16)/2), qso_diff])
- 
-
-
-        
-
