@@ -34,6 +34,7 @@ To use:
 - Extract background by minusing the stars
 - Compare to different catalogs (hook SDSS up to python?)
 - Radio dependency
+- 
 
 
 https://github.com/sciserver/SciScript-Python  
